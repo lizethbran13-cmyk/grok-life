@@ -92,7 +92,18 @@ function checkDaily() {
   save.daily.streak = save.daily.last === ys ? save.daily.streak + 1 : 1; save.daily.last = t; save.daily.best = Math.max(save.daily.best || 0, save.daily.streak);
   const n = DAILY[Math.min(6, save.daily.streak - 1)]; G.addMoney(n); if (save.daily.streak % 7 === 0) save.bag.cake = (save.bag.cake || 0) + 1;
   persist();
-  setTimeout(() => { if (GL.UI && GS.inWorld) GL.UI.daily(save.daily.streak, n); }, 900);
+  dailyQ = { streak: save.daily.streak, n, t: 0, tut: -1 }; // shown by tickDaily() once nothing else is on screen
+}
+// Daily bonus popup waits its turn: never on top of another panel/phone/talk, and not over an active tutorial step
+// (it waits until that step closes, or ~45s of free play as a fallback).
+let dailyQ = null;
+function tickDaily(dt) {
+  const q = dailyQ; if (!q || !GL.UI) return;
+  if (q.tut < 0) q.tut = save.tut >= 1 && save.tut < 5 ? save.tut : 0;
+  if (!freeToAct() || GS.me.act || (GL.Cars && GL.Cars.driving())) return;
+  q.t += dt; if (q.t < 0.9) return;
+  if (q.tut && save.tut === q.tut && q.t < 45) return;
+  dailyQ = null; GL.UI.daily(q.streak, q.n);
 }
 
 /* ======================================================================
@@ -277,8 +288,8 @@ function enterWorld(asGuest) {
   if (asGuest) travel('town', true, [GL.LOTS[3] + 2, 52.6]);
   else travel(myHomeArea(), true);
   Snd.music(true);
-  checkDaily();
   if (save.tut === 0) { save.tut = 1; persist(); }
+  checkDaily();
   void sp;
 }
 function myHomeArea() { const A = W.homeArea(GS.pid, G.homeData()); return A.id; }
@@ -492,9 +503,23 @@ function actTarget() {
   if (GL.Cars) { const c = GL.Cars.actTarget(); if (c) return c; }
   if (GS.me.act) return { kind: 'stop', label: 'STOP', name: GS.me.act.name || '', x: GS.me.x, z: GS.me.z };
   const h = nearestHot(), nn = GL.NPC ? GL.NPC.nearest(GS.me.x, GS.me.z) : null;
-  if (nn && (!h || nn.d < Math.hypot(h.x - GS.me.x, h.z - GS.me.z))) return { kind: 'npc', n: nn.n, label: 'TALK', name: nn.n.def.name, x: nn.n.x, z: nn.n.z, py: 2.4 };
-  return h;
+  const dh = h ? Math.hypot(h.x - GS.me.x, h.z - GS.me.z) : 1e9;
+  let pick = null, pd = 1e9;
+  if (nn && nn.d < dh) { pick = nn.n; pd = nn.d; } else if (h) { pick = h; pd = dh; }
+  // hysteresis: keep the current target while it's still roughly in range, unless something is clearly closer.
+  // Stops the button/prompt flickering between two targets (or on/off at the edge of reach) every frame.
+  const s = stickT;
+  if (s && s !== pick) {
+    const ds = Math.hypot(s.x - GS.me.x, s.z - GS.me.z);
+    const ok = s.def ? (s.area === W.cur.id && ds < 2.4 + 0.6) : (!s.hidden && W.cur.hots.indexOf(s) >= 0 && ds <= s.reach + 0.6);
+    if (ok && (!pick || pd > ds - 0.5)) { pick = s; pd = ds; }
+  }
+  stickT = pick;
+  if (!pick) return null;
+  if (pick.def) return { kind: 'npc', n: pick, label: 'TALK', name: pick.def.name, x: pick.x, z: pick.z, py: 2.4 };
+  return pick;
 }
+let stickT = null;
 function pressAct() {
   Snd.init(); const t = actTarget(); if (!t) return;
   if (t.kind === 'stop') { endAct(); return; }
@@ -614,15 +639,16 @@ function updateHUD(dt) {
   const t = actTarget(), act = $('bAct'), pr = $('prompt');
   const label = t ? t.label : (GL.Cars && GL.Cars.driving() ? 'EXIT' : '\u2022');
   if ($('actT').textContent !== label) $('actT').textContent = label;
-  act.className = t ? (t.kind === 'door' || t.kind === 'exit' || t.kind === 'apt' || t.kind === 'house' ? 'door' : t.kind === 'npc' ? 'talk' : '') : 'dim';
-  if (t && t.name && !(GL.Cars && GL.Cars.driving())) { const p = W.project(t.x, t.py || 1.9, t.z), k = (t.id || t.kind) + label + t.name; if (k !== promptKey) { promptKey = k; pr.innerHTML = (t.kind === 'npc' ? '\uD83D\uDCAC ' : '') + '<b>' + esc(label) + '</b> ' + esc(t.name); } pr.style.left = Math.round(p.x) + 'px'; pr.style.top = Math.round(p.y) + 'px'; pr.classList.remove('hidden'); }
-  else { pr.classList.add('hidden'); promptKey = ''; }
-  $('bEmote').classList.toggle('hidden', !(G.online() && friendNear(8)));
+  const cls = t ? (t.kind === 'door' || t.kind === 'exit' || t.kind === 'apt' || t.kind === 'house' ? 'door' : t.kind === 'npc' ? 'talk' : '') : 'dim';
+  if (act.className !== cls) act.className = cls;
+  if (t && t.name && !(GL.Cars && GL.Cars.driving())) { const p = W.project(t.x, t.py || 1.9, t.z), k = (t.id || t.kind) + label + t.name; if (k !== promptKey) { promptKey = k; pr.innerHTML = (t.kind === 'npc' ? '\uD83D\uDCAC ' : '') + '<b>' + esc(label) + '</b> ' + esc(t.name); } const l = Math.round(p.x) + 'px', tp = Math.round(p.y) + 'px'; if (pr.style.left !== l) pr.style.left = l; if (pr.style.top !== tp) pr.style.top = tp; setHidden(pr, false); }
+  else { setHidden(pr, true); promptKey = ''; }
+  setHidden($('bEmote'), !(G.online() && friendNear(8)));
   hudT -= dt; if (hudT <= 0) {
     hudT = 0.3;
     $('needsBar').innerHTML = NEED_KEYS.map((k) => { const v = save.needs[k]; return '<span class="nd' + (v < 25 ? ' low' : '') + '"><i>' + G.NEEDS[k][1] + '</i><em><b style="width:' + Math.round(v) + '%;background:' + (v < 25 ? '#ef4444' : v < 50 ? '#f59e0b' : '#22c55e') + '"></b></em></span>'; }).join('') + '<span class="moodF">' + G.moodFace() + '</span>';
     const A = W.cur; $('areaN').textContent = A.zone ? A.zone(GS.me.x, GS.me.z) : (A.label || '');
-    const online = G.online() && GS.room, S = S_(); $('roomPill').classList.toggle('hidden', !online); if (online) $('roomN').textContent = GS.room.code + ' \u00b7 ' + S.players.length + '/3';
+    const online = G.online() && GS.room, S = S_(); setHidden($('roomPill'), !online); if (online) $('roomN').textContent = GS.room.code + ' \u00b7 ' + S.players.length + '/3';
     const TC = teamColors(S); $('mates').innerHTML = S.players.filter((p) => p.pid !== GS.pid).map((p) => '<div class="mate" style="--c:' + esc(TC[p.pid] || p.color) + '">' + esc(p.name) + ' \u00b7 ' + esc(GS.pos[p.pid] ? areaLabel(GS.pos[p.pid]) : '\u2026') + '</div>').join('');
     if (GL.UI && GL.UI.tutHud) GL.UI.tutHud();
   }
@@ -633,14 +659,14 @@ G.areaLabel = areaLabel;
 G.guide = null;
 function updateGuide() {
   const el = $('guide'), g = G.guide;
-  if (!g || !inGame() || W.cur.id !== (g.area || 'town')) { el.classList.add('hidden'); return; }
+  if (!g || !inGame() || W.cur.id !== (g.area || 'town')) { setHidden(el, true); return; }
   const p = W.project(g.x, 1, g.z), m = 50, w = innerWidth, h = innerHeight;
   const on = p.vis && p.x > m && p.x < w - m && p.y > 90 && p.y < h - 140;
   let x = p.x, y = p.y; if (!p.vis) { x = w - x; y = h - y; }
   const cx = w / 2, cy = h / 2, dx = x - cx, dy = y - cy, a = Math.atan2(dy, dx);
   if (!on) { const s = Math.min((w / 2 - m) / Math.abs(dx || 1e-3), (h / 2 - 120) / Math.abs(dy || 1e-3)); x = cx + dx * s; y = cy + dy * s; }
-  el.style.left = x + 'px'; el.style.top = y + 'px'; el.querySelector('i').style.transform = on ? 'rotate(90deg)' : 'rotate(' + a + 'rad)'; el.querySelector('b').textContent = g.label || '';
-  el.classList.remove('hidden');
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.querySelector('i').style.transform = on ? 'rotate(90deg)' : 'rotate(' + a + 'rad)'; const gb = el.querySelector('b'), gl = g.label || ''; if (gb.textContent !== gl) gb.textContent = gl;
+  setHidden(el, false);
 }
 
 /* ======================================================================
@@ -661,7 +687,7 @@ function frame(now) {
     if (GL.NPC) GL.NPC.tick(dt);
     if (GL.Pets) GL.Pets.tick(dt);
     if (GL.Work) GL.Work.tick(dt);
-    updateAvatars(dt); updateHUD(dt); updateGuide();
+    updateAvatars(dt); updateHUD(dt); updateGuide(); tickDaily(dt);
     W.setClock(G.clock()); W.updateSigns(G.clock());
     const fp = GL.Cars && GL.Cars.camTarget(); W.updateCamera(fp ? fp[0] : GS.me.x, fp ? fp[1] : GS.me.z, dt);
     slowT -= dt; if (slowT <= 0) { slowT = 2; checkGoals(); syncMe(); }
@@ -676,11 +702,18 @@ function frame(now) {
   netTick(now);
   W.render();
 }
+// Only touch the DOM when visibility actually changes, and always with a real boolean.
+// (classList.toggle(c, undefined) TOGGLES instead of setting, which made the whole HUD blink every frame
+// for returning players, where GS.creating was never set.)
+function setHidden(el, hide) { hide = !!hide; if (el.classList.contains('hidden') !== hide) el.classList.toggle('hidden', hide); return hide; }
+G.setHidden = setHidden;
+let hudHidden = null;
 function renderScreens() {
   const ui = GS.ui;
-  $('scrTitle').classList.toggle('hidden', ui !== 'title');
-  $('scrOnline').classList.toggle('hidden', ui !== 'online');
-  $('hud').classList.toggle('hidden', ui !== 'game' || !!(GS.work && GS.work.overlay) || GS.creating);
+  setHidden($('scrTitle'), ui !== 'title');
+  setHidden($('scrOnline'), ui !== 'online');
+  const hide = ui !== 'game' || !!(GS.work && GS.work.overlay) || !!GS.creating;
+  if (hide !== hudHidden) { hudHidden = hide; setHidden($('hud'), hide); if (hide && GS.joyReset) GS.joyReset(); }
 }
 
 /* ======================================================================

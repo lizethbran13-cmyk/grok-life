@@ -301,8 +301,8 @@ UI.decorTap = function () { };
 /* ---------------- tutorial + arcade ---------------- */
 const TUT = ['', '\uD83D\uDC4B Welcome to Grokville! Walk into any store to explore.', '\uD83D\uDCCB Get a job at the Job Board in City Hall.', '\uD83D\uDCBC Go to your workplace and press WORK to do a shift.', '\uD83D\uDECD\uFE0F Spend your paycheck! Buy food, clothes, furniture\u2026'];
 UI.tutHud = function () {
-  const s = sv(), el = $('tut'); if (s.tut < 1 || s.tut >= 5 || GS.panel) { el.classList.add('hidden'); return; }
-  el.innerHTML = '<b>' + s.tut + '/4</b> ' + TUT[s.tut]; el.classList.remove('hidden');
+  const s = sv(), el = $('tut'); if (s.tut < 1 || s.tut >= 5 || GS.panel) { G.setHidden(el, true); return; }
+  const h = '<b>' + s.tut + '/4</b> ' + TUT[s.tut]; if (el.dataset.k !== h) { el.dataset.k = h; el.innerHTML = h; } G.setHidden(el, false);
   if (!G.guide) { if (s.tut === 2) { const b = W.bld('cityhall'); G.guide = { x: b.out[0], z: b.out[1], label: 'City Hall', tut: 1 }; } if (s.tut === 3 && s.job) { const C = GL.CAREERS[s.job], b = W.bld(C.place), p = b ? b.out : [-32, 31.5]; G.guide = { x: p[0], z: p[1], label: C.placeName, tut: 1 }; } }
 };
 UI.arcade = function () { open('arc', head('\uD83D\uDD79\uFE0F Grok Arcade') + '<p class="sub">Head to the Grok Arcade? Your Grok Life game is saved.</p><div class="btnrow">' + btn('close', null, 'STAY', 'alt') + '<a class="btn primary" href="' + esc(GN.hubUrl()) + '">GO!</a></div>'); };
