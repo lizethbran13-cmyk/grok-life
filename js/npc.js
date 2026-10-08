@@ -2,7 +2,7 @@
 (function () {
 'use strict';
 const GL = window.GL, G = GL.G, W = GL.W, MD = GL.MD, Snd = GL.Snd;
-const GS = G.GS, sv = () => G.save(), ang = G.ang, esc = GN.esc;
+const GS = G.GS, sv = () => G.save(), ang = G.ang, esc = window.GrokNet.esc;
 const N = GL.NPC = { list: [] };
 // work: [area, hot kind/id to stand near]; home: nh_ area or null (goes "home" off-screen)
 const DEFS = [

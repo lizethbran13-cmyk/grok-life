@@ -15,7 +15,7 @@ C.respawn = function (keepPos) { const s = sv(), old = my; const c = activeCar()
 C.spawnAt = function (x, z, yaw) { const s = sv(); s.carPos = [x, z, yaw]; C.respawn(); G.persist(); };
 C.parkHome = function () { const s = sv(); if (my && my.drive) return; s.carPos = null; C.respawn(); };
 C.homesChanged = function () { if (!sv().carPos && !(my && my.drive)) C.respawn(); };
-C.bring = function () { if (!activeCar()) { G.toast('You don\u2019t have a car yet!'); return; } if (GS.me.area !== 'town') { G.toast('Step outside first, then call your car.'); return; } const yaw = GS.me.yaw; let p = W.freeNear(W.areas.town, GS.me.x + Math.sin(yaw) * 3.5, GS.me.z + Math.cos(yaw) * 3.5, 1.3); C.spawnAt(p[0], p[1], yaw); Snd.fx('honk'); G.toast('\uD83D\uDE97 Your car is here!'); };
+C.bring = function () { if (!activeCar()) { G.toast('You don\u2019t have a car yet!'); return; } if (GS.me.area !== 'town') { G.toast('Step outside first, then call your car.'); return; } const yaw = GS.me.yaw; let p = W.freeNear(W.areas.town, GS.me.x + Math.sin(yaw) * 3, GS.me.z + Math.cos(yaw) * 3, 1.3); C.spawnAt(p[0], p[1], yaw); Snd.fx('honk'); G.toast('\uD83D\uDE97 Your car is here!'); };
 C.driving = () => !!((my && my.drive) || (work && work.drive));
 function cur() { return work && work.drive ? work : my && my.drive ? my : null; }
 C.cur = cur;
@@ -35,7 +35,7 @@ C.actTarget = function () {
   const o = cur(); if (o) return { car: 1, kind: 'exit', label: work ? 'HONK' : 'EXIT', name: '', x: o.x, z: o.z };
   if (GS.me.ride) return { car: 1, kind: 'unride', label: 'GET OUT', name: '', x: GS.me.x, z: GS.me.z };
   if (GS.me.act) return null;
-  if (my && Math.hypot(my.x - GS.me.x, my.z - GS.me.z) < 3.2) return { car: 1, kind: 'drive', label: 'DRIVE', name: GL.CARS[my.type].name, x: my.x, z: my.z, py: 2 };
+  if (my && Math.hypot(my.x - GS.me.x, my.z - GS.me.z) < 4) return { car: 1, kind: 'drive', label: 'DRIVE', name: GL.CARS[my.type].name, x: my.x, z: my.z, py: 2 };
   for (const pid in remote) { const r = remote[pid], pos = GS.pos[pid]; if (pos && pos.c && pos.c[5] && Math.hypot(r.x - GS.me.x, r.z - GS.me.z) < 3.6) { const seats = r.m.seats.length, used = 1 + Object.keys(GS.pos).filter((k) => GS.pos[k].rd === pid).length; if (used < seats) return { car: 1, kind: 'ride', pid, label: 'RIDE', name: 'with ' + G.playerInfo(pid).name, x: r.x, z: r.z, py: 2 }; } }
   return null;
 };
