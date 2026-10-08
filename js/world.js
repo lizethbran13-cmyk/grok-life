@@ -191,7 +191,12 @@ const BLD = [
   { id: 'arcade', name: 'Grok Arcade', icon: '\uD83D\uDD79\uFE0F', x0: 26, x1: 40, z0: 28, z1: 40, door: 's', col: '#312e81', roof: '#ff4fd8', sign: 'GROK ARCADE', open: [0, 24] },
   { id: 'dealer', name: 'Sal\u2019s Car Dealership', icon: '\uD83D\uDE97', x0: -40, x1: -14, z0: -72, z1: -58, door: 's', col: '#e0f2fe', roof: '#0284c7', sign: 'SAL\u2019S CARS', open: [8, 20] },
   { id: 'fire', name: 'Fire Station', icon: '\uD83D\uDE92', x0: -5, x1: 13, z0: -72, z1: -58, door: 's', col: '#fecaca', roof: '#b91c1c', sign: 'FIRE STATION 1', open: [0, 24], dx: -5 },
-  { id: 'police', name: 'Police Station', icon: '\uD83D\uDE93', x0: 26, x1: 42, z0: -72, z1: -58, door: 's', col: '#dbeafe', roof: '#1e3a8a', sign: 'POLICE', open: [0, 24] }
+  { id: 'police', name: 'Police Station', icon: '\uD83D\uDE93', x0: 26, x1: 42, z0: -72, z1: -58, door: 's', col: '#dbeafe', roof: '#1e3a8a', sign: 'POLICE', open: [0, 24] },
+  { id: 'museum', name: 'Grokville Museum', icon: '\uD83C\uDFDB\uFE0F', x0: -57, x1: -43, z0: -73, z1: -60, door: 's', col: '#f5f5f4', roof: '#a16207', sign: 'MUSEUM', open: [9, 20], h: 6.5 },
+  { id: 'jewelry', name: 'Glitter & Gold Jewelers', icon: '\uD83D\uDC8D', x0: 15.5, x1: 24.5, z0: -72, z1: -61, door: 's', col: '#fdf4ff', roof: '#a21caf', sign: 'GLITTER & GOLD', open: [9, 20] },
+  { id: 'shelter', name: 'Grokville Animal Shelter', icon: '\uD83D\uDC36', x0: 44, x1: 57, z0: -72, z1: -60, door: 's', col: '#ecfccb', roof: '#65a30d', sign: 'ANIMAL SHELTER', open: [0, 24] },
+  { id: 'clinic', name: 'Maple Clinic', icon: '\uD83E\uDE7A', x0: 50, x1: 60, z0: 58, z1: 70, door: 'n', col: '#ecfeff', roof: '#0891b2', sign: 'CLINIC', open: [8, 20] },
+  { id: 'pawn', name: 'Sid\u2019s Pawn & Stuff', icon: '\uD83C\uDFA9', x0: -60, x1: -50, z0: 58, z1: 69, door: 'n', col: '#e7e5e4', roof: '#44403c', sign: 'SID\u2019S PAWN', open: [0, 24] }
 ];
 W.BLD = BLD; W.bld = (id) => BLD.find((b) => b.id === id);
 W.isOpen = function (id, min) { const b = W.bld(id); if (!b) return true; const h = (min / 60) % 24; return b.open[0] === 0 && b.open[1] === 24 ? true : h >= b.open[0] && h < b.open[1]; };
@@ -340,6 +345,25 @@ function decorateBuildings(A) {
   { const b = W.bld('boutique'); [b.x0 + 2.4, b.x1 - 2.4].forEach((x, i) => { const m = MD.avatar({ skin: '#f5f5f4', hair: 'buzz', hc: '#f5f5f4', top: i ? 'dress' : 'jacket', tc: i ? '#f472b6' : '#8b5cf6', bc: '#1f2937' }); m.g.position.set(x, 0, b.z0 - 0.7); m.g.rotation.y = Math.PI; g.add(m.g); obsC(A, x, b.z0 - 0.7, 0.4); }); }
   // Pet store paw
   { const b = W.bld('petstore'); const p = signPlane('\uD83D\uDC3E', 1.4, 1.4, '#f59e0b'); p.position.set(b.x1 - 1.4, 3.6, b.z1 + 0.1); g.add(p); }
+  // Museum columns + steps
+  { const b = W.bld('museum'); for (let i = -2; i <= 2; i++) if (i) cyl(0.32, 5.4, '#e7e5e4', g, b.cx + i * 2.4, 2.7, b.z1 + 0.9); box(13, 0.4, 2.2, '#d6d3d1', g, b.cx, 5.6, b.z1 + 0.9); ground(A, 12, 3, '#e7e5e4', b.cx, b.z1 + 1.6, 0.1); const gm = signPlane('\uD83D\uDC8E', 1.3, 1.3, '#a16207'); gm.position.set(b.cx, 7.4, b.z1 + 0.1); g.add(gm); }
+  // Jeweler sparkle sign
+  { const b = W.bld('jewelry'); const r = signPlane('\uD83D\uDC8D', 1.2, 1.2, '#a21caf'); r.position.set(b.x1 - 1.2, 3.6, b.z1 + 0.1); g.add(r); }
+  // Shelter: fenced yard + van parking
+  { const b = W.bld('shelter'); const p = signPlane('\uD83D\uDC3E', 1.4, 1.4, '#65a30d'); p.position.set(b.x0 + 1.4, 3.6, b.z1 + 0.1); g.add(p); ground(A, 7, 4, '#9ca3af', b.x1 - 3.5, b.z1 + 2.4, 0.095); W.shelterPark = [b.x1 - 3.5, b.z1 + 2.6, Math.PI / 2]; }
+  // Clinic: red cross
+  { const b = W.bld('clinic'); box(1.8, 0.5, 0.2, M('#ef4444', { emissive: '#7f1d1d' }), g, b.cx + 3, 3.8, b.z0 - 0.15); box(0.5, 1.8, 0.2, M('#ef4444', { emissive: '#7f1d1d' }), g, b.cx + 3, 3.8, b.z0 - 0.15); }
+  // Pawn: neon hat + shady awning
+  { const b = W.bld('pawn'); const ht = signPlane('\uD83C\uDFA9', 1.2, 1.2, '#44403c'); ht.position.set(b.x0 + 1.4, 3.6, b.z0 - 0.1); ht.rotation.y = Math.PI; g.add(ht); }
+  // hiding spots: big leafy hedges you can duck into when you\u2019re in trouble (also fun for hide & seek)
+  W.hides = [];
+  [[-24, -24, 'Alley Hedge'], [16, -24, 'Civic Hedge'], [-9.5, 17, 'Park Hedge'], [-41.5, 41.5, 'Corner Hedge'], [25.5, 24.5, 'Hospital Hedge'], [-57.5, -30, 'West Hedge'], [57.5, 30, 'East Hedge'], [2, -76.5, 'Back Lot Hedge'], [-55, 73.5, 'Pawn Shop Hedge'], [36, -2.5, 'Parking Hedge']].forEach((q, i) => {
+    const f = W.freeNear(A, q[0], q[1], 1.1); MD.bush(g, f[0], f[1], 1.5); obsC(A, f[0], f[1], 0.8);
+    const h = hot(A, { id: 'hide' + i, kind: 'hide', x: f[0], z: f[1] + 1.4, hx: f[0], hz: f[1], reach: 1.6, name: q[2], label: 'HIDE' }); W.hides.push(h);
+  });
+  // basketball hoop in the park
+  { const hp = grp(g, -17, 0, 10); cyl(0.09, 3, '#64748b', hp, 0, 1.5, 0); box(1.4, 0.9, 0.08, '#f8fafc', hp, 0, 3.1, 0.25); const rg = mesh(G.torus || G.ring || G.cyl, '#f97316', hp, 0, 2.75, 0.55, 0.28, 0.28, 0.28); rg.rotation.x = Math.PI / 2; obsC(A, -17, 10, 0.25); ground(A, 6, 5, '#f59e0b', -17, 12.6, 0.105);
+    hot(A, { id: 'hoops', kind: 'play', play: 'hoops', x: -17, z: 13.2, reach: 1.8, name: 'Basketball Hoop', label: 'SHOOT' }); }
 }
 function buildPark(A) {
   const g = A.g;
@@ -592,6 +616,55 @@ function buildInteriors() {
   furnAt(A, 'computer', -5, -4.8, 0); furnAt(A, 'computer', -5, -1.5, 0);
   hot(A, { id: 'work', kind: 'work', career: 'police', x: 0, z: -1.4, reach: 1.8, name: 'Front Desk (Police)', label: 'WORK' });
   label(A, '\uD83D\uDE93 POLICE STATION', 0, 3.0, -5.1, 'rgba(30,58,138,.92)');
+  // museum (look at the treasures \u2014 or plan a cartoon caper if you\u2019ve turned to crime)
+  A = room('museum', 20, 13, tileTex('#f5f5f4', '#e7e5e4', 10, 6.5), '#fef3c7', { cam: { h: 10.5, d: 10 } }); A.label = 'Grokville Museum'; A.loot = {};
+  { const pd = grp(A.g, -5, 0, -3.2); cyl(0.7, 1.0, '#e7e5e4', pd, 0, 0.5, 0); const gem = dyn(grp(A.g, -5, 1.45, -3.2)); const gm = mesh(G.sph, M('#3b82f6', { emissive: '#1d4ed8' }), gem, 0, 0, 0, 0.42, 0.42, 0.42); void gm; mesh(G.cone, M('#facc15', { emissive: '#a16207' }), gem, 0.9, -0.2, 0, 0.3, 0.3, 0.3);
+    box(1.7, 1.2, 1.7, M('#bae6fd', { transparent: true, opacity: 0.35 }), A.g, -5, 1.6, -3.2); obsB(A, -5.9, -4.1, -4.1, -2.3); A.loot.gems = gem; }
+  { const pd = grp(A.g, 5, 0, -3.2); box(2.4, 0.9, 1.4, '#a16207', pd, 0, 0.45, 0); const rel = dyn(grp(A.g, 5, 0.9, -3.2)); box(0.35, 0.5, 0.6, M('#facc15', { emissive: '#a16207' }), rel, -0.5, 0.35, 0); sph(0.16, M('#facc15', { emissive: '#a16207' }), rel, -0.5, 0.72, 0.25); ell(0.25, 0.34, 0.25, '#fef3c7', rel, 0.55, 0.3, 0); obsB(A, 3.7, 6.3, -4, -2.4); A.loot.relics = rel; }
+  { const dino = grp(A.g, 0, 0, -5.2); for (let i = 0; i < 5; i++) sph(0.32 - i * 0.03, '#e7e5e4', dino, -1.4 + i * 0.6, 2.0 + Math.sin(i) * 0.3, 0); cyl(0.12, 1.8, '#e7e5e4', dino, -0.6, 0.9, 0); cyl(0.12, 1.8, '#e7e5e4', dino, 0.8, 0.9, 0); sph(0.45, '#e7e5e4', dino, 1.7, 2.6, 0); obsB(A, -2, 2.4, -5.8, -4.6); }
+  [-7.5, 7.5].forEach((x) => { for (let i = 0; i < 3; i++) cyl(0.05, 0.9, '#a16207', A.g, x, 0.45, -1 + i); });
+  { const gd = MD.avatar({ skin: GL.SKINS[2], hair: 'short', hc: '#4b5563', top: 'jacket', tc: '#1e3a8a', bc: '#1f2937', hat: 'police', gl: 'none' }); gd.g.position.set(7.6, 0, 3.2); gd.g.rotation.y = -Math.PI / 2; A.g.add(gd.g); furnAt(A, 'chair', 7.9, 3.2, -Math.PI / 2, 1, false); obsC(A, 7.6, 3.2, 0.5); label(A, '\uD83D\uDCA4 Guard Gus', 7.6, 2.5, 3.2, 'rgba(30,58,138,.9)'); }
+  hot(A, { id: 'h_gems', kind: 'heist', heist: 'gems', x: -5, z: -1.6, reach: 1.8, name: 'Big Blue Gem', label: 'LOOK' });
+  hot(A, { id: 'h_relics', kind: 'heist', heist: 'relics', x: 5, z: -1.6, reach: 1.8, name: 'Ancient Relics', label: 'LOOK' });
+  hot(A, { id: 'dino', kind: 'exhibit', x: 0, z: -3.6, reach: 1.8, name: 'Dino Skeleton', label: 'LOOK' });
+  label(A, '\uD83C\uDFDB\uFE0F GROKVILLE MUSEUM', 0, 3.0, -6.1, 'rgba(161,98,7,.92)');
+  // jewelry store
+  A = room('jewelry', 14, 10, carpetTex('#f5d0fe', 4, 3), '#fdf4ff'); A.label = 'Glitter & Gold'; A.loot = {};
+  { counter(A, -3, -2.6, 4, 1, '#a21caf', '#bae6fd'); counter(A, 3, -2.6, 4, 1, '#a21caf', '#bae6fd'); const jw = dyn(grp(A.g, 0, 1.15, -2.6)); for (let i = 0; i < 10; i++) { const x = (i < 5 ? -4.6 : 1.4) + (i % 5) * 0.8; mesh(G.torus || G.sph, M(['#facc15', '#f472b6', '#e5e7eb', '#38bdf8'][i % 4], { emissive: '#713f12' }), jw, x, 0, 0, 0.14, 0.14, 0.14); } A.loot.jewels = jw; }
+  { const jl = MD.avatar({ skin: GL.SKINS[4], hair: 'bun', hc: '#e5e7eb', top: 'suit', tc: '#a21caf', bc: '#1f2937', gl: 'round' }); jl.g.position.set(0, 0, -4.4); A.g.add(jl.g); obsC(A, 0, -4.4, 0.4); }
+  hot(A, { id: 'h_jewels', kind: 'heist', heist: 'jewels', x: 0, z: -1.4, reach: 1.9, name: 'Jewelry Cases', label: 'LOOK' });
+  label(A, '\uD83D\uDC8D GLITTER & GOLD', 0, 3.0, -4.6, 'rgba(162,28,175,.92)');
+  // animal shelter
+  A = room('shelter', 18, 12, tileTex('#ecfccb', '#d9f99d', 9, 6), '#f7fee7'); A.label = 'Animal Shelter'; A.kennels = [];
+  for (let i = 0; i < 6; i++) { const x = -7.5 + i * 3, k = grp(A.g, x, 0, -4.6); box(2.6, 0.05, 2, '#d9f99d', k, 0, 0.03, 0); for (let j = 0; j < 6; j++) box(0.05, 1.1, 0.05, '#94a3b8', k, -1.3 + j * 0.52, 0.55, 1); box(2.6, 0.05, 0.05, '#94a3b8', k, 0, 1.1, 1); A.kennels.push([x, -4.8]); }
+  obsB(A, -9, 9, -6, -3.5); A.petsG = dyn(grp(A.g));
+  counter(A, -4, -0.6, 3.4, 1, '#65a30d'); counter(A, 4.5, -0.6, 3, 1, '#f59e0b');
+  { const st = MD.avatar({ skin: GL.SKINS[1], hair: 'ponytail', hc: '#a16207', top: 'jacket', tc: '#65a30d', bc: '#1f2937', hat: 'cap', hatc: '#f59e0b' }); st.g.position.set(-4, 0, -1.6); A.g.add(st.g); }
+  hot(A, { id: 'adopt', kind: 'shelter', x: -4, z: 0.6, reach: 1.8, name: 'Adopt a Rescue', label: 'ADOPT' });
+  hot(A, { id: 'lost', kind: 'lostfound', x: 4.5, z: 0.6, reach: 1.8, name: 'Lost & Found Pets', label: 'LOST PETS' });
+  hot(A, { id: 'work', kind: 'work', career: 'animalcontrol', x: 7.2, z: 2.6, reach: 1.7, name: 'Van Keys (Animal Control)', label: 'WORK' });
+  label(A, '\uD83D\uDC36 GROKVILLE ANIMAL SHELTER', 0, 3.0, -5.6, 'rgba(101,163,13,.92)');
+  // clinic
+  A = room('clinic', 16, 11, tileTex('#f0fdfa', '#ccfbf1', 8, 5.5), '#ecfeff'); A.label = 'Maple Clinic';
+  counter(A, -3, -2.8, 3.4, 1, '#0891b2'); counter(A, 4.6, -3.4, 3, 1, '#16a34a'); shelfUnit(A, 4.6, -5.0, 3, 0, ['#f472b6', '#38bdf8', '#facc15', '#22c55e']);
+  { const bd = furnAt(A, 'bed', -6.4, -3.2, 0, 0.9); void bd; box(0.05, 2.2, 3, '#a5f3fc', A.g, -5.2, 1.1, -3.6); }
+  [-2, -1, 0, 1].forEach((x, i) => { furnAt(A, 'chair', x * 1.1 - 1, 2.6, Math.PI, 1, false); seatHot(A, 'wait' + i, x * 1.1 - 1, 2.6, Math.PI, 'Waiting Room Chair'); }); obsB(A, -3.6, 0.6, 2.25, 2.95);
+  { const nr = MD.avatar({ skin: GL.SKINS[5], hair: 'bun', hc: '#1f2937', top: 'coat', tc: '#f8fafc', bc: '#0891b2' }); nr.g.position.set(-3, 0, -3.8); A.g.add(nr.g); }
+  hot(A, { id: 'checkin', kind: 'checkin', x: -3, z: -1.6, reach: 1.8, name: 'Front Desk', label: 'CHECK IN' });
+  hot(A, { id: 'pharm', kind: 'shop', shop: 'pharm', x: 4.6, z: -2.2, reach: 1.8, name: 'Pharmacy', label: 'PHARMACY' });
+  label(A, '\uD83E\uDE7A MAPLE CLINIC', 0, 3.0, -5.1, 'rgba(8,145,178,.92)');
+  // pawn shop
+  A = room('pawn', 14, 10, woodTex('#a8a29e', '#9a948f', 5, 4), '#e7e5e4'); A.label = 'Sid\u2019s Pawn & Stuff';
+  counter(A, 0, -2.6, 5, 1, '#44403c', '#a8a29e'); shelfUnit(A, -4.5, -4.6, 4, 0, ['#f59e0b', '#94a3b8', '#ef4444', '#22c55e']); shelfUnit(A, 4.5, -4.6, 4, 0, ['#a16207', '#64748b', '#fde047']);
+  { const sid = MD.avatar({ skin: GL.SKINS[2], hair: 'short', hc: '#1f2937', top: 'jacket', tc: '#57534e', bc: '#1f2937', hat: 'cowboy', hatc: '#1f2937', gl: 'shades' }); sid.g.position.set(0, 0, -3.7); A.g.add(sid.g); }
+  hot(A, { id: 'fence', kind: 'fence', x: 0, z: -1.4, reach: 1.9, name: 'Shady Sid', label: 'TALK' });
+  label(A, '\uD83C\uDFA9 SID\u2019S PAWN & STUFF', 0, 3.0, -4.6, 'rgba(68,64,60,.92)');
+  // bank vault + hospital billing / ER (extras)
+  { const B = W.areas.bank; A = B; const vd = dyn(grp(B.g, 4.5, 1.6, -4.7)); B.loot = { vault: vd }; for (let i = 0; i < 3; i++) box(0.5, 0.2, 0.25, M('#facc15', { emissive: '#a16207' }), vd, -0.6 + i * 0.6, -1.3, 0.2);
+    hot(B, { id: 'h_vault', kind: 'heist', heist: 'vault', x: 5.6, z: -3.7, reach: 1.7, name: 'Bank Vault', label: 'LOOK' }); }
+  { const Hs = W.areas.hospital; counter(Hs, -6, -4.4, 2.6, 1, '#dc2626'); hot(Hs, { id: 'billing', kind: 'billing', x: -6, z: -3.2, reach: 1.7, name: 'Billing Desk', label: 'BILLS' }); Hs.erBed = [7.3, 0]; }
+  // wet floor at Fresh Mart (slippery!)
+  { const Gm = W.areas.grocery; const pz = cyl(0.9, 0.02, M('#7dd3fc', { transparent: true, opacity: 0.6 }), Gm.g, 0.5, 0.02, 2.6); void pz; const sg = grp(Gm.g, 1.6, 0, 2.2); const a = box(0.5, 0.8, 0.04, '#facc15', sg, 0, 0.4, 0.12); a.rotation.x = 0.25; const b2 = box(0.5, 0.8, 0.04, '#facc15', sg, 0, 0.4, -0.12); b2.rotation.x = -0.25; Gm.wet = [[0.5, 2.6, 1.0]]; label(Gm, '\u26A0\uFE0F WET FLOOR', 1.6, 1.3, 2.2, 'rgba(202,138,4,.92)'); }
   // neighbours' homes
   const NH = {
     gladys: { wall: '#ede9fe', floor: 'purple', items: [['bed', -4.5, -3.3, 0], ['armchair', 2, -3.6, 0], ['tv', 2, -0.6, Math.PI], ['bookshelf', -1, -4.3, 0], ['plant', 5.8, -4.0, 0], ['painting', 4.5, -4.5, 0], ['rug', 2, -2.2, 0]] },
@@ -602,7 +675,7 @@ function buildInteriors() {
   Object.keys(NH).forEach((id) => { const h = NH[id]; A = room('nh_' + id, 14, 10, W.floorTex(h.floor, 14, 10), h.wall); A.label = NPC_LOTS[Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id)].name + '\u2019s House'; A.npcHome = id; h.items.forEach((q) => furnAt(A, q[0], q[1], q[2], q[3], 1, q[0] !== 'rug')); });
   { const A2 = W.areas.nh_grumble; const ks = signPlane('NO VISITORS (mostly)', 2.6, 0.5, '#dc2626'); ks.position.set(-1, 2.4, -4.83); A2.g.add(ks); }
   { const A2 = W.areas.nh_gladys; const bn = grp(A2.g, 5.5, 0, 2); box(0.12, 0.12, 0.3, '#111827', bn, -0.1, 1.5, 0); box(0.12, 0.12, 0.3, '#111827', bn, 0.1, 1.5, 0); cyl(0.04, 1.4, '#78350f', bn, 0, 0.7, 0); }
-  ['grocery', 'boutique', 'cafe', 'bank', 'cityhall', 'furniture', 'petstore', 'hospital', 'school', 'garage', 'dealer', 'fire', 'police', 'nh_gladys', 'nh_rosa', 'nh_grumble', 'nh_joe'].forEach((id) => { const a = W.areas[id]; const b = W.bld(id); a.exitTo = b ? b.out : null; if (id.indexOf('nh_') === 0) { const li = +Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id.slice(3)); a.exitTo = [GL.LOTS[li] - 1.5, 58.4]; } bake(a.g); });
+  ['grocery', 'boutique', 'cafe', 'bank', 'cityhall', 'furniture', 'petstore', 'hospital', 'school', 'garage', 'dealer', 'fire', 'police', 'museum', 'jewelry', 'shelter', 'clinic', 'pawn', 'nh_gladys', 'nh_rosa', 'nh_grumble', 'nh_joe'].forEach((id) => { const a = W.areas[id]; const b = W.bld(id); a.exitTo = b ? b.out : null; if (id.indexOf('nh_') === 0) { const li = +Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id.slice(3)); a.exitTo = [GL.LOTS[li] - 1.5, 58.4]; } bake(a.g); });
 }
 
 /* ---------------- player homes ---------------- */

@@ -6,6 +6,9 @@ const $ = (id) => document.getElementById(id);
 const esc = GN.esc, clamp = GL.clamp, TAU = Math.PI * 2;
 const IS_TOUCH = matchMedia('(pointer: coarse)').matches || (('ontouchstart' in window) && navigator.maxTouchPoints > 0);
 const G = GL.G = {};
+// feature modules (health, crime, animal control) plug in here
+G.hooks = { host: [], ev: [], tick: [], hostTick: [], reset: [], newDay: [], leave: [], mob: [], kinds: {} };
+G.statusParts = []; G.statusHTML = () => G.statusParts.map((f) => { try { return f() || ''; } catch (e) { return ''; } }).join('');
 const ang = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 G.ang = ang;
 
@@ -18,13 +21,18 @@ function freshSave() {
     home: W.defaultLayout('apt'), wall: 0, floor: 'wood', inv: {}, bag: { sandwich: 1, apple: 2 }, clothes: { tee: 1, hoodie: 1, dress: 1, none: 1 },
     cars: [], car: null, carPos: null, jobs: {}, job: null, pets: [], nextPet: 1,
     needs: { h: 80, e: 85, f: 75, y: 80, s: 70 }, clock: 8 * 60, day: 1, npc: {},
-    stats: { shifts: 0, drive: 0, houses: 0, hangs: 0, tricks: 0, cooked: 0, earned: 0, clothes: 0, online: 0, gifts: 0, perfect: 0, walk: 0 },
-    goals: {}, daily: { last: '', streak: 0, best: 0 }, workDay: 0, tut: 0, visited: {}, drive: 'easy', autogas: true, lastT: Date.now(), wish: 0 };
+    stats: { shifts: 0, drive: 0, houses: 0, hangs: 0, tricks: 0, cooked: 0, earned: 0, clothes: 0, online: 0, gifts: 0, perfect: 0, walk: 0, healed: 0, strays: 0 },
+    goals: {}, daily: { last: '', streak: 0, best: 0 }, workDay: 0, tut: 0, visited: {}, drive: 'easy', autogas: true, lastT: Date.now(), wish: 0,
+    hp: 100, inj: null, appt: null, bills: [], crime: { on: false, loot: {}, done: {}, busts: 0, escapes: 0, jail: 0 }, shelter: [], lostDay: 0 };
 }
 let save = freshSave();
 try {
   const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-  if (s && s.v === 1) { const f = freshSave(); save = Object.assign(f, s, { stats: Object.assign(f.stats, s.stats || {}), needs: Object.assign(f.needs, s.needs || {}), look: Object.assign(f.look, s.look || {}), daily: Object.assign(f.daily, s.daily || {}) }); }
+  if (s && s.v === 1) { const f = freshSave(); save = Object.assign(f, s, { stats: Object.assign(f.stats, s.stats || {}), needs: Object.assign(f.needs, s.needs || {}), look: Object.assign(f.look, s.look || {}), daily: Object.assign(f.daily, s.daily || {}), crime: Object.assign(f.crime, s.crime || {}) }); }
+  // older saves (before health / crime / animal control) get safe defaults
+  if (!(save.hp >= 0 && save.hp <= 100)) save.hp = 100; if (!Array.isArray(save.bills)) save.bills = []; if (!Array.isArray(save.shelter)) save.shelter = [];
+  if (save.inj && !(GL.INJ && GL.INJ[save.inj.id])) save.inj = null; if (!save.crime.loot || typeof save.crime.loot !== 'object') save.crime.loot = {}; if (!save.crime.done || typeof save.crime.done !== 'object') save.crime.done = {};
+  (save.pets || []).forEach((p) => { if (p.missing && p.missing !== 'lost' && p.missing !== 'shelter') p.missing = 'lost'; });
 } catch (e) { /* ignore */ }
 if (!save.name) { const gp = GN.savedProfile(); if (gp.hasName) { save.name = gp.name; save.color = gp.color; } }
 let saveT = 0;
@@ -42,8 +50,9 @@ G.myName = myName; G.prof = prof;
 const GS = G.GS = { role: null, room: null, pid: GN.pid(), S: null, ui: 'title', me: { area: 'town', x: 33, z: -12, yaw: 0, sp: 0, act: null, ride: null }, pos: {}, av: {},
   panel: null, goal: null, dirty: false, lastSend: 0, lastPos: 0, lastPosSent: '', connecting: false, inWorld: false, evSeen: 0, emote: null, emoteT: 0, work: null, talk: null, decor: null };
 const S_ = () => GS.S;
-function newSession() { return { v: 1, players: [], looks: {}, homes: {}, assign: {}, clock: save.clock || 480, day: save.day || 1, ev: [], evId: 0 }; }
+function newSession() { return { v: 1, players: [], looks: {}, homes: {}, assign: {}, clock: save.clock || 480, day: save.day || 1, ev: [], evId: 0, strays: [], shelter: [], cops: [], wanted: {}, acvan: null, vans: {}, sid: 1 }; }
 function touch() { GS.dirty = true; }
+G.pushEv = (e) => pushEv(e); G.touch = () => touch();
 function pushEv(e) { const S = S_(); S.evId++; e.id = S.evId; S.ev.push(e); if (S.ev.length > 30) S.ev.shift(); touch(); }
 function playerInfo(pid) { const S = S_(); const p = S && S.players.find((q) => q.pid === pid); return p || { pid, name: pid === GS.pid ? myName() : 'Friend', color: '#ffffff' }; }
 G.playerInfo = playerInfo;
@@ -169,6 +178,7 @@ function hostAct(pid, m) {
     case 'team': { const pids = (Array.isArray(m.pids) ? m.pids : []).filter((q) => q !== pid && S.players.some((p) => p.pid === q)); if (pids.length) pushEv({ type: 'teampay', pids, by: playerInfo(pid).name, cid: String(m.cid || '').slice(0, 12), amt: clamp(Math.round(+m.amt || 0), 0, 400) }); break; }
     case 'wave': pushEv({ type: 'emote', from: pid, by: playerInfo(pid).name, e: ['wave', 'dance', 'five', 'hug'].indexOf(m.e) >= 0 ? m.e : 'wave', to: m.to ? String(m.to).slice(0, 40) : null }); break;
     case 'nap': break;
+    default: for (const fn of G.hooks.host) fn(pid, m, S);
   }
 }
 function doAct(m) { if (!GS.S) return; if (GS.role === 'client') { if (GS.room) GS.room.send(Object.assign({ t: 'act' }, m)); } else hostAct(GS.pid, m); }
@@ -182,6 +192,7 @@ function playersFromRoom() {
   S.players = r ? r.players().map((p) => ({ pid: p.pid, name: p.name, color: p.color, host: p.host })) : [{ pid: GS.pid, name: myName(), color: prof.color, host: true }];
   for (const k in S.looks) if (!S.players.some((p) => p.pid === k)) delete S.looks[k];
   for (const k in S.homes) if (!S.players.some((p) => p.pid === k)) delete S.homes[k];
+  if (GS.role !== 'client') G.hooks.leave.forEach((fn) => fn(S));
   assignHomes(); touch();
 }
 function startSolo() { leaveSession(true); GS.role = 'solo'; GS.S = newSession(); playersFromRoom(); GS.lookKey = ''; GS.homeKey = ''; syncMe(); enterWorld(); }
@@ -213,7 +224,7 @@ function joinOnline(code) {
   room.on('message', (d) => {
     if (!d || GS.room !== room) return;
     if (d.t === 'st' && d.s) applyState(d.s);
-    else if (d.t === 'pp' && d.p) { for (const k in d.p) if (k !== GS.pid) GS.pos[k] = cleanPos(d.p[k]); for (const k in GS.pos) if (!d.p[k]) delete GS.pos[k]; }
+    else if (d.t === 'pp' && d.p) { GS.mob = d.mob && typeof d.mob === 'object' ? d.mob : {}; for (const k in d.p) if (k !== GS.pid) GS.pos[k] = cleanPos(d.p[k]); for (const k in GS.pos) if (!d.p[k]) delete GS.pos[k]; }
   });
   room.on('join', (p) => { if (GS.S) { G.toast(p.name + ' joined!'); Snd.fx('join'); } });
   room.on('leave', (p) => { if (GS.S && !p.host) { G.toast(p.name + ' went home', true); Snd.fx('leave'); if (GS.me.area === 'h_' + p.pid) exitHouseTo(p.pid); } });
@@ -241,7 +252,7 @@ function takeOver() {
   const r = GS.room; GS.room = null; GS.role = 'solo'; try { if (r) r.leave(); } catch (e) { /* ignore */ }
   GS.S = newSession(); GS.pos = {}; playersFromRoom(); GS.lookKey = ''; GS.homeKey = ''; syncMe(); lotKey = '';
   if (GS.me.ride) { GS.me.ride = null; }
-  GS.evSeen = 0; if (GL.Cars) GL.Cars.reset();
+  GS.evSeen = 0; if (GL.Cars) GL.Cars.reset(); G.hooks.reset.forEach((fn) => fn());
   G.toast('The host left. You\u2019re back in your own town \u2014 everything is saved!', true); Snd.fx('leave');
   if (GS.work) GL.Work.abort(true);
   closePanel();
@@ -257,6 +268,7 @@ function leaveSession(silent) {
   closePanel(); $('scrMenu').classList.add('hidden'); $('phone').classList.add('hidden');
   for (const k in GS.av) W.scene.remove(GS.av[k].ch.g); GS.av = {};
   if (GL.Cars) GL.Cars.reset(); if (GL.Pets) GL.Pets.clear();
+  G.hooks.reset.forEach((fn) => fn()); GS.ovl = null;
   Snd.music(false); lotKey = '';
   if (!silent) GS.ui = 'title';
 }
@@ -264,14 +276,14 @@ function netTick(now) {
   if (!GS.room || !GS.S) return;
   if (GS.role === 'host') {
     if ((GS.dirty && now - GS.lastSend > 80) || now - GS.lastSend > 1000) { GS.room.broadcast({ t: 'st', s: GS.S }); GS.lastSend = now; GS.dirty = false; }
-    if (now - GS.lastPos > 100) { GS.lastPos = now; const p = Object.assign({}, GS.pos); p[GS.pid] = myPos(); GS.room.broadcast({ t: 'pp', p }); }
+    if (now - GS.lastPos > 100) { GS.lastPos = now; const p = Object.assign({}, GS.pos); p[GS.pid] = myPos(); const mob = {}; G.hooks.mob && G.hooks.mob.forEach((fn) => fn(mob)); GS.room.broadcast({ t: 'pp', p, mob }); }
   } else if (GS.role === 'client') {
     const p = myPos(), key = JSON.stringify(p);
     if (now - GS.lastPos > 100 && (key !== GS.lastPosSent || now - GS.lastPos > 900)) { GS.lastPos = now; GS.lastPosSent = key; GS.room.send(Object.assign({ t: 'pos' }, p)); }
   }
 }
 function myPos() {
-  const m = GS.me, a = m.act, c = GL.Cars ? GL.Cars.netInfo() : null;
+  const m = GS.me, a = m.act, c = (G.carOverride && G.carOverride()) || (GL.Cars ? GL.Cars.netInfo() : null);
   return { a: m.area, x: +m.x.toFixed(2), z: +m.z.toFixed(2), r: +m.yaw.toFixed(2), m: m.sp > 0.1 ? 1 : 0, act: a ? a.pose || a.kind : null, ax: a ? +(+a.x || 0).toFixed(2) : 0, az: a ? +(+a.z || 0).toFixed(2) : 0, ay: a ? +(+a.yaw || 0).toFixed(2) : 0,
     c, rd: m.ride, w: GS.work ? GS.work.cid : null, e: GS.emoteT > 0 ? GS.emote : null };
 }
@@ -327,6 +339,7 @@ function processEvents() {
       G.need('s', 15); Snd.fx('buy'); persist();
     } else if (e.type === 'teampay' && e.pids.indexOf(GS.pid) >= 0) {
       G.addMoney(e.amt, 'earn'); G.need('s', 10); G.toast('\uD83E\uDD1D Teamwork! You helped ' + e.by + ' \u2014 +' + GL.money(e.amt)); persist();
+    } else if (e.type !== 'gift' && e.type !== 'teampay' && e.type !== 'emote') { for (const fn of G.hooks.ev) fn(e);
     } else if (e.type === 'emote' && e.from !== GS.pid && (!e.to || e.to === GS.pid)) {
       const n = { wave: 'waves at you \uD83D\uDC4B', dance: 'is dancing! \uD83D\uDC83', five: 'high-fives you! \u270B', hug: 'hugs you \uD83E\uDD17' }[e.e];
       G.toast(e.by + ' ' + n); if (e.to === GS.pid) { G.need('s', 12); G.need('f', 4); const a = GS.av[GS.pid]; if (a) W.fx('heart', GS.me.x, 2.3, GS.me.z, 4, 0.5); }
@@ -339,7 +352,7 @@ function processEvents() {
    ====================================================================== */
 function inGame() { return GS.ui === 'game' && GS.inWorld && GS.S; }
 G.inGame = inGame;
-function freeToAct() { return inGame() && !GS.panel && !GS.talk && !GS.decor && !(GS.work && GS.work.overlay) && $('scrMenu').classList.contains('hidden') && $('phone').classList.contains('hidden'); }
+function freeToAct() { return inGame() && !GS.panel && !GS.talk && !GS.decor && !(GS.work && GS.work.overlay) && !GS.ovl && $('scrMenu').classList.contains('hidden') && $('phone').classList.contains('hidden'); }
 G.freeToAct = freeToAct;
 function nearestHot() {
   if (!W.cur) return null; let best = null, bd = 1e9;
@@ -354,6 +367,7 @@ function interact(h) {
   switch (h.kind) {
     case 'door': {
       if (h.to === 'arcade') { UI.arcade(); return; }
+      if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to) && save.crime.on && (h.to === 'museum' || h.to === 'jewelry' || h.to === 'bank')) { G.toast('\uD83E\uDD77 You tiptoe in through the back window\u2026'); travel(h.to); return; }
       if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to)) { const b = W.bld(h.to); G.toast(b.name + ' is closed right now. Open ' + G.timeStr(b.open[0] * 60) + ' \u2013 ' + G.timeStr(b.open[1] * 60) + '.', true); Snd.fx('no'); return; }
       travel(h.to); return;
     }
@@ -374,9 +388,10 @@ function interact(h) {
     case 'work': GL.Work.request(h.career); return;
     case 'sit': startAct({ kind: 'sit', pose: 'sit', x: h.sx, z: h.sz, yaw: h.yaw, name: h.name }); return;
     case 'furn': useFurn(h); return;
-    case 'play': startAct({ kind: 'play', play: h.play, pose: h.play === 'swing' ? 'sit' : null, x: h.x, z: h.z, yaw: Math.PI, dur: 6, name: h.name }); return;
+    case 'play': startAct({ kind: 'play', play: h.play, pose: h.play === 'swing' ? 'sit' : null, x: h.x, z: h.z, yaw: Math.PI, dur: h.play === 'hoops' ? 5 : 6, name: h.play === 'hoops' ? 'Shooting hoops' : h.name, act: h.play === 'hoops' ? 'game' : null }); return;
     case 'fountain': if (G.spend(1)) { save.wish++; G.need('f', 6); W.fx('coin', -24, 1.6, 24, 1); W.fx('sparkle', -24, 1.5, 24, 6, 1.5); G.toast(['\u2728 You make a wish\u2026', '\u2728 Plink! A wish for good luck!', '\u2728 The fountain sparkles!'][save.wish % 3]); } return;
     case 'pond': G.need('f', 8); G.need('s', 3); W.fx('heart', -15, 0.8, 32, 4, 2); Snd.fx('tweet'); G.toast('\uD83E\uDD86 The ducks quack happily!'); return;
+    default: if (G.hooks.kinds[h.kind]) G.hooks.kinds[h.kind](h);
   }
 }
 G.interact = interact;
@@ -400,7 +415,7 @@ function useFurn(h) {
   }
 }
 // activities: sit, sleep, shower, tv, games...
-const ACT_FX = { sit: { s: 0.1, e: 0.2 }, sleep: {}, shower: { y: 14 }, tv: { f: 3.5 }, game: { f: 4.5, s: 0.5 }, computer: { f: 2.5, s: 1.5 }, read: { f: 2.5 }, piano: { f: 3.5 }, play: { f: 4, s: 0.6 } };
+const ACT_FX = { hide: {}, sit: { s: 0.1, e: 0.2 }, sleep: {}, shower: { y: 14 }, tv: { f: 3.5 }, game: { f: 4.5, s: 0.5 }, computer: { f: 2.5, s: 1.5 }, read: { f: 2.5 }, piano: { f: 3.5 }, play: { f: 4, s: 0.6 } };
 function startAct(a) {
   if (GS.me.act) endAct(true);
   a.t = 0; a.px = GS.me.x; a.pz = GS.me.z; GS.me.act = a; GS.goal = null;
@@ -422,8 +437,9 @@ function tickAct(dt) {
   if (a.kind === 'sleep' && Math.random() < dt * 1.5) W.fx('zzz', a.x, 1.2, a.z, 1, 0.2);
   if (a.kind === 'shower' && Math.random() < dt * 12) W.fx('drop', a.x, 2.4, a.z, 1, 0.6);
   if ((a.kind === 'tv' || a.kind === 'game' || a.kind === 'piano') && Math.random() < dt * 1.5) W.fx(a.kind === 'piano' ? 'note' : 'sparkle', a.x, 2.1, a.z, 1, 0.4);
-  if (a.slide) { const k = Math.min(1, a.t / 1.6); a.x = -36.5; a.z = 12.6 + k * 3.6; a.y = 2 * (1 - k); if (k >= 1) { a.slide = 0; a.y = 0; G.need('f', 10); endAct(true); G.toast('\uD83D\uDE1D Wheee!'); return; } }
-  if (a.dur && a.t >= a.dur) endAct();
+  if (a.slide) { const k = Math.min(1, a.t / 1.6); a.x = -36.5; a.z = 12.6 + k * 3.6; a.y = 2 * (1 - k); if (k >= 1) { a.slide = 0; a.y = 0; G.need('f', 10); endAct(true); G.toast('\uD83D\uDE1D Wheee!'); if (G.onPlayDone) G.onPlayDone('slide'); return; } }
+  if (a.play === 'hoops' && Math.random() < dt * 2) W.fx('star', a.x, 2.8, a.z - 1.4, 1, 0.4);
+  if (a.dur && a.t >= a.dur) { const pl = a.kind === 'play' ? a.play : null; endAct(); if (pl === 'hoops') { G.need('f', 8); G.need('e', -4); } if (pl && G.onPlayDone) G.onPlayDone(pl); }
 }
 
 /* ======================================================================
@@ -453,6 +469,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyM') { toggleMute(); return; }
   if (!inGame()) return;
   if (GS.work && GS.work.overlay) { if (GL.Work.key) GL.Work.key(e.code); return; }
+  if (GS.ovl) return;
   if (e.code === 'Escape') { if (GS.panel) closePanel(); else if (!$('phone').classList.contains('hidden')) $('phone').classList.add('hidden'); else if (GS.talk) GL.NPC.close(); else $('scrMenu').classList.toggle('hidden'); return; }
   if (e.repeat || GS.panel || GS.talk) return;
   if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') { e.preventDefault(); pressAct(); }
@@ -500,8 +517,9 @@ function tapAt(x, y) {
 }
 function actTarget() {
   if (!freeToAct()) return null;
+  if (G.actHook && !GS.me.act) { const t = G.actHook(); if (t) return t; }
   if (GL.Cars) { const c = GL.Cars.actTarget(); if (c) return c; }
-  if (GS.me.act) return { kind: 'stop', label: 'STOP', name: GS.me.act.name || '', x: GS.me.x, z: GS.me.z };
+  if (GS.me.act) return { kind: 'stop', label: GS.me.act.stopLabel || 'STOP', name: GS.me.act.name || '', x: GS.me.x, z: GS.me.z };
   const h = nearestHot(), nn = GL.NPC ? GL.NPC.nearest(GS.me.x, GS.me.z) : null;
   const dh = h ? Math.hypot(h.x - GS.me.x, h.z - GS.me.z) : 1e9;
   let pick = null, pd = 1e9;
@@ -525,6 +543,7 @@ function pressAct() {
   if (t.kind === 'stop') { endAct(); return; }
   if (t.kind === 'npc') { GL.NPC.talk(t.n); return; }
   if (t.car) { GL.Cars.act(t); return; }
+  if (t.custom) { t.custom(t); return; }
   interact(t);
 }
 G.pressAct = pressAct;
@@ -545,7 +564,8 @@ function updateMe(dt) {
   const m = GS.me;
   if (GL.Cars && (GL.Cars.driving() || m.ride)) { m.sp = 0; return; }
   if (m.act) { m.sp = 0; return; }
-  let [ix, iz, mag] = (GS.panel || GS.talk || GS.decor || (GS.work && GS.work.overlay)) ? [0, 0, 0] : G.input();
+  if (G.frozen && G.frozen()) { m.sp = 0; GS.goal = null; return; }
+  let [ix, iz, mag] = (GS.panel || GS.talk || GS.decor || GS.ovl || (GS.work && GS.work.overlay)) ? [0, 0, 0] : G.input();
   if (mag > 0.05) GS.goal = null;
   else if (GS.goal) {
     const g = GS.goal; if (g.npc) { g.x = g.npc.x; g.z = g.npc.z; }
@@ -553,7 +573,7 @@ function updateMe(dt) {
     if (d <= stop) { const h = g.hot, n = g.npc; GS.goal = null; if (n) GL.NPC.talk(n); else if (h) interact(h); }
     else { ix = dx / d; iz = dz / d; mag = 1; if (d < g.best - 0.05) { g.best = d; g.stuck = 0; } else { g.stuck += dt; if (g.stuck > 0.6) GS.goal = null; } }
   }
-  const slow = G.lowNeed() ? 0.8 : 1, sp = (W.cur.outdoor ? 6.4 : 4.6) * mag * slow;
+  const slow = (G.lowNeed() ? 0.8 : 1) * (G.speedMul ? G.speedMul() : 1), sp = (W.cur.outdoor ? 6.4 : 4.6) * mag * slow;
   if (mag > 0.05) {
     const r = W.move(W.cur, m.x, m.z, ix * sp * dt, iz * sp * dt, 0.36), moved = Math.hypot(r[0] - m.x, r[1] - m.z);
     m.x = r[0]; m.z = r[1]; m.sp = moved / Math.max(dt, 1e-3); save.stats.walk += moved;
@@ -586,8 +606,9 @@ function updateAvatars(dt) {
   const car = GL.Cars ? GL.Cars.mySeat() : null;
   me.waveT = (me.waveT || 0) - dt; me.emote = GS.emoteT > 0 ? GS.emote : null; GS.emoteT -= dt; if (GS.emoteT > 0 && GS.emote === 'wave') me.waveT = 0.2;
   if (car) { me.ch.g.visible = true; placeAvatar(me, 0, 0, 0, dt, 0, { pose: 'drive', x: car.x, z: car.z, y: car.y, yaw: car.yaw }); }
-  else { me.ch.g.visible = true; placeAvatar(me, GS.me.x, GS.me.z, GS.me.yaw, dt, GS.me.sp, GS.me.act); }
-  moodTag(me, GS.me.act && GS.me.act.kind === 'sleep' ? '' : (G.lowNeed() ? G.NEEDS[G.lowNeed()][1] : ''));
+  else { me.ch.g.visible = !(GS.me.act && GS.me.act.kind === 'hide') && !(G.meHidden && G.meHidden()); placeAvatar(me, GS.me.x, GS.me.z, GS.me.yaw, dt, GS.me.sp, GS.me.act); }
+  const ii = G.injIcon ? G.injIcon() : '';
+  moodTag(me, GS.me.act && GS.me.act.kind === 'sleep' ? '' : ii || (G.lowNeed() ? G.NEEDS[G.lowNeed()][1] : ''));
   const live = {}; live[GS.pid] = 1;
   mates.forEach((p) => {
     live[p.pid] = 1; const pos = GS.pos[p.pid], lk = S.looks[p.pid]; const a = ensureAvatar(p.pid, lk ? lk.av : GL.defaultLook(), p.name, TC[p.pid] || p.color, false);
@@ -598,6 +619,7 @@ function updateAvatars(dt) {
     a.ch.g.visible = true; a.emote = pos.e; a.waveT = pos.e === 'wave' ? 0.2 : 0;
     const seat = GL.Cars ? GL.Cars.remoteSeat(p.pid, pos) : null;
     if (seat) placeAvatar(a, 0, 0, 0, dt, 0, { pose: 'drive', x: seat.x, z: seat.z, y: seat.y, yaw: seat.yaw });
+    else if (pos.act === 'hide') a.ch.g.visible = false;
     else if (pos.act) placeAvatar(a, a.x, a.z, a.yaw, dt, 0, { pose: pos.act === 'sit' || pos.act === 'lie' ? pos.act : null, kind: pos.act, act: pos.act === 'game' ? 'game' : pos.act === 'work' ? 'work' : null, x: pos.ax, z: pos.az, yaw: pos.ay });
     else placeAvatar(a, a.x, a.z, a.yaw, dt, pos.m ? 4 : Math.hypot(a.x - ox, a.z - oz) / Math.max(dt, 1e-3));
   });
@@ -623,6 +645,7 @@ function newDay() {
   if (save.rent && save.house === 'bungalow' && save.rent !== 'own') { if (save.money >= GL.HOUSES.bungalow.rent) { save.money -= GL.HOUSES.bungalow.rent; G.toast('\uD83C\uDFE0 Rent paid: ' + GL.money(GL.HOUSES.bungalow.rent)); } else G.toast('\uD83C\uDFE0 Rent is due! The landlord will wait a bit.', true); }
   if (save.savings > 0) { const i = Math.min(200, Math.round(save.savings * 0.01)); save.savings += i; if (i) G.toast('\uD83C\uDFE6 Savings interest: +' + GL.money(i)); }
   if (GL.NPC && GL.NPC.newDay) GL.NPC.newDay();
+  G.hooks.newDay.forEach((fn) => fn());
   persist();
 }
 G.skipTo = function (min) { const S = S_(); if (!S || GS.role === 'client') return; if (min <= S.clock) { S.day++; newDay(); } S.clock = min; touch(); };
@@ -646,7 +669,10 @@ function updateHUD(dt) {
   setHidden($('bEmote'), !(G.online() && friendNear(8)));
   hudT -= dt; if (hudT <= 0) {
     hudT = 0.3;
-    $('needsBar').innerHTML = NEED_KEYS.map((k) => { const v = save.needs[k]; return '<span class="nd' + (v < 25 ? ' low' : '') + '"><i>' + G.NEEDS[k][1] + '</i><em><b style="width:' + Math.round(v) + '%;background:' + (v < 25 ? '#ef4444' : v < 50 ? '#f59e0b' : '#22c55e') + '"></b></em></span>'; }).join('') + '<span class="moodF">' + G.moodFace() + '</span>';
+    const hp = Math.round(save.hp), hpc = hp < 30 ? '#ef4444' : hp < 60 ? '#f59e0b' : '#f43f5e';
+    const nb = '<span class="nd hp' + (hp < 30 ? ' low' : '') + '" id="hpBar"><i>\u2764\uFE0F<small>' + hp + '</small></i><em><b style="width:' + hp + '%;background:' + hpc + '"></b></em></span>' + NEED_KEYS.map((k) => { const v = save.needs[k]; return '<span class="nd' + (v < 25 ? ' low' : '') + '"><i>' + G.NEEDS[k][1] + '</i><em><b style="width:' + Math.round(v) + '%;background:' + (v < 25 ? '#ef4444' : v < 50 ? '#f59e0b' : '#22c55e') + '"></b></em></span>'; }).join('') + '<span class="moodF">' + G.moodFace() + '</span>';
+    if (nb !== GS.nbKey) { GS.nbKey = nb; $('needsBar').innerHTML = nb; }
+    const st = G.statusHTML ? G.statusHTML() : ''; if (st !== GS.stKey) { GS.stKey = st; $('status').innerHTML = st; document.body.classList.toggle('hasStatus', !!st); }
     const A = W.cur; $('areaN').textContent = A.zone ? A.zone(GS.me.x, GS.me.z) : (A.label || '');
     const online = G.online() && GS.room, S = S_(); setHidden($('roomPill'), !online); if (online) $('roomN').textContent = GS.room.code + ' \u00b7 ' + S.players.length + '/3';
     const TC = teamColors(S); $('mates').innerHTML = S.players.filter((p) => p.pid !== GS.pid).map((p) => '<div class="mate" style="--c:' + esc(TC[p.pid] || p.color) + '">' + esc(p.name) + ' \u00b7 ' + esc(GS.pos[p.pid] ? areaLabel(GS.pos[p.pid]) : '\u2026') + '</div>').join('');
@@ -687,9 +713,11 @@ function frame(now) {
     if (GL.NPC) GL.NPC.tick(dt);
     if (GL.Pets) GL.Pets.tick(dt);
     if (GL.Work) GL.Work.tick(dt);
+    for (const fn of G.hooks.tick) fn(dt);
+    if (GS.role !== 'client') for (const fn of G.hooks.hostTick) fn(dt, S);
     updateAvatars(dt); updateHUD(dt); updateGuide(); tickDaily(dt);
     W.setClock(G.clock()); W.updateSigns(G.clock());
-    const fp = GL.Cars && GL.Cars.camTarget(); W.updateCamera(fp ? fp[0] : GS.me.x, fp ? fp[1] : GS.me.z, dt);
+    const fp = (G.camHook && G.camHook()) || (GL.Cars && GL.Cars.camTarget()); W.updateCamera(fp ? fp[0] : GS.me.x, fp ? fp[1] : GS.me.z, dt);
     slowT -= dt; if (slowT <= 0) { slowT = 2; checkGoals(); syncMe(); }
     if (now - saveT > 6000) persist(now);
   } else {
@@ -712,7 +740,8 @@ function renderScreens() {
   const ui = GS.ui;
   setHidden($('scrTitle'), ui !== 'title');
   setHidden($('scrOnline'), ui !== 'online');
-  const hide = ui !== 'game' || !!(GS.work && GS.work.overlay) || !!GS.creating;
+  const hide = ui !== 'game' || !!(GS.work && GS.work.overlay) || !!GS.ovl || !!GS.creating;
+  document.body.classList.toggle('inOvl', !!GS.ovl || !!(GS.work && GS.work.overlay));
   if (hide !== hudHidden) { hudHidden = hide; setHidden($('hud'), hide); if (hide && GS.joyReset) GS.joyReset(); }
 }
 

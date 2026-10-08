@@ -73,7 +73,7 @@ function closeCreator() { if (CR) W.scene.remove(CR.prev.g); CR = null; GS.creat
 UI.boutique = () => UI.creator('boutique');
 
 /* ---------------- phone ---------------- */
-const APPS = [['map', '\uD83D\uDDFA\uFE0F', 'Map'], ['career', '\uD83D\uDCBC', 'Career'], ['house', '\uD83C\uDFE0', 'House'], ['cars', '\uD83D\uDE97', 'Cars'], ['pets', '\uD83D\uDC3E', 'Pets'], ['friends', '\uD83D\uDC9E', 'Friends'], ['goals', '\uD83C\uDFC6', 'Goals'], ['bag', '\uD83C\uDF92', 'Bag'], ['bank', '\uD83C\uDFE6', 'Bank'], ['settings', '\u2699\uFE0F', 'Settings']];
+const APPS = [['map', '\uD83D\uDDFA\uFE0F', 'Map'], ['career', '\uD83D\uDCBC', 'Career'], ['house', '\uD83C\uDFE0', 'House'], ['cars', '\uD83D\uDE97', 'Cars'], ['pets', '\uD83D\uDC3E', 'Pets'], ['friends', '\uD83D\uDC9E', 'Friends'], ['goals', '\uD83C\uDFC6', 'Goals'], ['bag', '\uD83C\uDF92', 'Bag'], ['bank', '\uD83C\uDFE6', 'Bank'], ['health', '\uD83E\uDE7A', 'Health'], ['animal', '\uD83D\uDC3E', 'Animal Ctrl'], ['settings', '\u2699\uFE0F', 'Settings']];
 UI.phone = function () {
   const s = sv(); const p = $('phone');
   p.innerHTML = '<div class="phBox"><div class="phTop"><span>' + G.timeStr() + '</span><b>' + money(s.money) + '</b><button class="xbtn" data-a="phClose">\u2715</button></div><div class="apps">' + APPS.map((a) => '<button class="app" data-a="app" data-v="' + a[0] + '"><i>' + a[1] + '</i><span>' + a[2] + '</span></button>').join('') + '</div><p class="sub small">' + (G.online() && GS.room ? 'Room ' + GS.room.code + ' \u00b7 ' + GS.S.players.length + '/3' : 'Playing solo') + '</p></div>';
@@ -144,11 +144,11 @@ H.resetAsk = () => open('reset', head('Reset?') + '<p class="sub">This deletes y
 H.resetYes = () => G.resetSave();
 
 /* ---------------- needs, bag, eat, cook ---------------- */
-UI.needs = function () { const s = sv(); open('needs', head(G.moodFace() + ' How you feel') + '<div class="list">' + Object.keys(G.NEEDS).map((k) => '<div class="lrow"><b>' + G.NEEDS[k][1] + ' ' + G.NEEDS[k][0] + '</b><span class="meter"><em style="width:' + Math.round(s.needs[k]) + '%"></em></span></div>').join('') + '</div><p class="sub small">Low needs just slow you down a little. Eat food, sleep in a bed, shower, have fun and chat with people to feel great!</p>'); };
+UI.needs = function () { const s = sv(); open('needs', head(G.moodFace() + ' How you feel') + '<div class="list"><div class="lrow"><b>\u2764\uFE0F Health' + (s.inj ? ' <small>' + GL.INJ[s.inj.id].icon + ' ' + esc(GL.INJ[s.inj.id].name) + '</small>' : '') + '</b><span class="meter"><em style="width:' + Math.round(s.hp) + '%;background:#f43f5e"></em></span></div>' + Object.keys(G.NEEDS).map((k) => '<div class="lrow"><b>' + G.NEEDS[k][1] + ' ' + G.NEEDS[k][0] + '</b><span class="meter"><em style="width:' + Math.round(s.needs[k]) + '%"></em></span></div>').join('') + '</div>' + btn('app', 'health', '\uD83E\uDE7A HEALTH APP', 'small') + '<p class="sub small">Low needs just slow you down a little. Eat food, sleep in a bed, shower, have fun and chat with people to feel great!</p>'); };
 UI.bag = function (mode) {
   const s = sv(); let h = head('\uD83C\uDF92 Bag') + '<div class="list">'; const ks = Object.keys(s.bag).filter((k) => s.bag[k] > 0);
   if (!ks.length) h += '<p class="sub">Your bag is empty. Buy food at Fresh Mart or the caf\u00e9!</p>';
-  ks.forEach((k) => { const it = GL.ITEMS[k]; h += '<div class="lrow"><b>' + it.icon + ' ' + esc(it.name) + ' \u00d7' + s.bag[k] + '</b><span>' + (it.cat === 'food' ? btn('eat', k, 'EAT', 'small green') : it.cat === 'cook' ? '<small>use at a stove</small>' : it.cat === 'pet' || it.cat === 'toy' ? '<small>for pets</small>' : '<small>gift</small>') + '</span></div>'; });
+  ks.forEach((k) => { const it = GL.ITEMS[k]; h += '<div class="lrow"><b>' + it.icon + ' ' + esc(it.name) + ' \u00d7' + s.bag[k] + '</b><span>' + (it.cat === 'food' ? btn('eat', k, 'EAT', 'small green') : it.cat === 'med' ? btn('useMed', k, 'USE', 'small green') : it.cat === 'cook' ? '<small>use at a stove</small>' : it.cat === 'pet' || it.cat === 'toy' ? '<small>for pets</small>' : '<small>gift</small>') + '</span></div>'; });
   open('bag', h + '</div>'); void mode;
 };
 H.eat = (k) => { const s = sv(), it = GL.ITEMS[k]; if (!s.bag[k]) return; s.bag[k]--; if (it.h) G.need('h', it.h); if (it.e) G.need('e', it.e); if (it.f) G.need('f', it.f); Snd.fx('eat'); W.fx('heart', GS.me.x, 2, GS.me.z, 3, 0.4); G.toast('\uD83D\uDE0B Yum! ' + it.name); G.persist(); UI.bag(); };
@@ -162,7 +162,7 @@ UI.sleep = function () {
   const solo = !G.online() || GS.role === 'host' && GS.S.players.length === 1;
   $('fade').classList.add('on');
   setTimeout(() => {
-    if (solo) { const h = G.hour(); const target = 7 * 60; if (h >= 18 || h < 7) G.skipTo(target); else G.skipTo((G.clock() + 120) % 1440); sv().needs.e = 100; G.need('h', -8); G.endAct(true); G.toast('\u2600\uFE0F Good morning! Fully rested.'); if (GL.Cars) GL.Cars.parkHome(); }
+    if (solo) { const h = G.hour(); const target = 7 * 60; if (h >= 18 || h < 7) G.skipTo(target); else G.skipTo((G.clock() + 120) % 1440); sv().needs.e = 100; G.need('h', -8); if (G.onSleep) G.onSleep(); G.endAct(true); G.toast('\u2600\uFE0F Good morning! Fully rested.'); if (GL.Cars) GL.Cars.parkHome(); }
     else G.toast('\uD83D\uDCA4 Taking a nap\u2026 (tap to wake up)');
     $('fade').classList.remove('on');
   }, solo ? 900 : 300);
@@ -176,9 +176,9 @@ H.emote = (e) => { G.closePanel(); GS.emote = e; GS.emoteT = e === 'dance' ? 5 :
 UI.shop = function (w) {
   const s = sv();
   if (w === 'furn') { let h = head('\uD83D\uDECB\uFE0F Cozy Home Furniture') + '<p class="sub small">' + money(s.money) + ' \u00b7 Bought furniture goes to storage. Place it with DECORATE at home (phone \u2192 House).</p><div class="grid">'; GL.FURN_ORDER.forEach((k) => { const f = GL.FURN[k]; h += '<button class="item" data-a="buyF" data-v="' + k + '"><i>' + f.icon + '</i><b>' + esc(f.name) + '</b><small>' + money(f.price) + (s.inv[k] ? ' \u00b7 own ' + s.inv[k] : '') + '</small></button>'; }); open('shop', h + '</div>'); return; }
-  const name = { grocery: '\uD83D\uDED2 Fresh Mart', cafe: '\u2615 Sunny Side Caf\u00e9', pet: '\uD83D\uDC3E Pet Supplies' }[w];
+  const name = { grocery: '\uD83D\uDED2 Fresh Mart', cafe: '\u2615 Sunny Side Caf\u00e9', pet: '\uD83D\uDC3E Pet Supplies', pharm: '\uD83D\uDC8A Maple Clinic Pharmacy' }[w];
   let h = head(name) + '<p class="sub small">' + money(s.money) + (w === 'cafe' ? ' \u00b7 Caf\u00e9 food is eaten right away.' : ' \u00b7 Items go in your bag.') + '</p><div class="grid">';
-  GL.itemsAt(w).forEach((k) => { const it = GL.ITEMS[k]; h += '<button class="item" data-a="buyI" data-v="' + k + '|' + w + '"><i>' + it.icon + '</i><b>' + esc(it.name) + '</b><small>' + money(it.price) + (it.h ? ' \u00b7 \uD83C\uDF54+' + it.h : '') + (it.e ? ' \u26A1+' + it.e : '') + (it.desc ? '<br>' + esc(it.desc) : '') + '</small></button>'; });
+  GL.itemsAt(w).forEach((k) => { const it = GL.ITEMS[k]; h += '<button class="item" data-a="buyI" data-v="' + k + '|' + w + '"><i>' + it.icon + '</i><b>' + esc(it.name) + '</b><small>' + money(it.price) + (it.h ? ' \u00b7 \uD83C\uDF54+' + it.h : '') + (it.e ? ' \u26A1+' + it.e : '') + (it.hp ? ' \u2764\uFE0F+' + it.hp : '') + (it.desc ? '<br>' + esc(it.desc) : '') + '</small></button>'; });
   open('shop', h + '</div>');
 };
 H.buyI = (v) => { const [k, w] = v.split('|'), it = GL.ITEMS[k], s = sv(); if (!G.spend(it.price)) return; G.tutNext(4); if (w === 'cafe') { if (it.h) G.need('h', it.h); if (it.e) G.need('e', it.e); if (it.f) G.need('f', it.f); G.need('s', 3); Snd.fx('eat'); G.toast('\uD83D\uDE0B ' + it.name + ' \u2014 delicious!'); } else { s.bag[k] = (s.bag[k] || 0) + 1; G.toast('\u2714 ' + it.icon + ' ' + it.name + ' added to your bag'); } G.persist(); UI.shop(w); };
@@ -251,7 +251,7 @@ H.adoptS = (sp) => { const S = GL.SPECIES[sp]; if (!G.spend(S.price)) return; GL
 UI.pets = function () {
   const s = sv(); let h = head('\uD83D\uDC3E My Pets');
   if (!s.pets.length) h += '<p class="sub">No pets yet! Adopt one at <b>Paws & Claws</b> (or bring your family pets home there!).</p>' + btn('guideB', 'petstore', '\uD83E\uDDED GUIDE ME', 'primary');
-  else h += '<div class="list">' + s.pets.map((p) => '<div class="lrow"><b><img class="pic sm" src="' + UI.portrait(GL.Pets.look(p)) + '">' + esc(p.name) + '<small>\uD83C\uDF56 ' + Math.round(p.n.h) + ' \u00b7 \uD83C\uDF88 ' + Math.round(p.n.f) + ' \u00b7 tricks: ' + (Object.keys(p.tricks).filter((k) => p.tricks[k] >= GL.TRICK_NEED).join(', ') || 'none') + '</small></b><span>' + btn('petOut', p.id, p.out ? '\uD83C\uDFE0 STAY HOME' : '\uD83D\uDEB6 COME ALONG', 'small') + btn('petCare', p.id, '\u2764\uFE0F CARE', 'small primary') + '</span></div>').join('') + '</div>';
+  else h += '<div class="list">' + s.pets.map((p) => '<div class="lrow"><b><img class="pic sm" src="' + UI.portrait(GL.Pets.look(p)) + '">' + esc(p.name) + '<small>\uD83C\uDF56 ' + Math.round(p.n.h) + ' \u00b7 \uD83C\uDF88 ' + Math.round(p.n.f) + ' \u00b7 tricks: ' + (Object.keys(p.tricks).filter((k) => p.tricks[k] >= GL.TRICK_NEED).join(', ') || 'none') + '</small></b><span>' + (p.missing ? '<small class="red">' + (p.missing === 'shelter' ? 'AT THE SHELTER' : 'MISSING!') + '</small>' + btn('app', 'animal', '\uD83D\uDC3E ANIMAL CONTROL', 'small red') : btn('petOut', p.id, p.out ? '\uD83C\uDFE0 STAY HOME' : '\uD83D\uDEB6 COME ALONG', 'small') + btn('petCare', p.id, '\u2764\uFE0F CARE', 'small primary')) + '</span></div>').join('') + '</div>';
   open('pets', h);
 };
 H.petOut = (id) => { GL.Pets.toggleOut(+id); UI.pets(); };

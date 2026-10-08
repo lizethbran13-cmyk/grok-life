@@ -338,3 +338,50 @@ html, body { background: #87ceeb; }
 .wTgt { position: absolute; width: 72px; height: 72px; margin: -36px 0 0 -36px; border-radius: 50%; border: 4px solid #fff; background: rgba(255,255,255,.9); font-size: 40px; animation: tin .2s ease-out; }
 .wTgt.ok { transform: scale(1.3); opacity: 0; transition: .2s; } .wTgt.bad { background: #fca5a5; }
 .wQuit { align-self: center; } .wPromo { font-size: 22px; color: #d0359a; margin: 8px 0; } .wCard .big { color: #16a34a; }
+
+/* ---------- health / crime / animal control (v4) ---------- */
+.nd.hp { width: 44px; } .nd.hp i { display: flex; align-items: center; gap: 1px; } .nd.hp small { font-size: 11px; font-weight: 800; }
+.nd.hp em { width: 40px; }
+#status { position: absolute; top: calc(156px + var(--st)); left: calc(8px + var(--sl)); max-width: min(62vw, 420px); display: flex; flex-direction: column; gap: 5px; align-items: flex-start; pointer-events: none; }
+#status:empty { display: none; }
+.spill { pointer-events: auto; display: inline-flex; align-items: center; gap: 4px; min-height: 36px; max-width: 100%; padding: 4px 12px; border-radius: 18px; border: 3px solid #fff; background: rgba(58,23,71,.82); color: #fff; font-size: 14px; font-weight: 800; line-height: 1.15; text-align: left; box-shadow: 0 3px 0 rgba(0,0,0,.18); }
+.spill.red { background: rgba(185,28,28,.9); } .spill.green { background: rgba(77,124,15,.92); }
+.spill.wanted { font-size: 16px; letter-spacing: 1px; animation: pulse 1s infinite; }
+body.hasStatus #tut { top: calc(206px + var(--st)); }
+body.hasStatus #mates { top: calc(152px + var(--st)); }
+.hpBig { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 10px; } .hpBig b { font-size: 20px; }
+.hpBig .meter { height: 16px; padding: 3px; } .hpBig .meter em { display: block; height: 10px; border-radius: 5px; }
+#pnlCard .meter em { display: block; height: 10px; border-radius: 5px; min-width: 2px; }
+.appt { margin: 8px 0; padding: 10px 12px; border-radius: 16px; background: #ecfeff; border: 3px solid #0891b2; color: #164e63; font-size: 15px; text-align: left; }
+.appt small { color: #0e7490; }
+.btncol .btn.small { width: 100%; }
+/* fullscreen story overlays (insurance call, heists, jail) share the work overlay look */
+.ovl { position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: calc(12px + var(--st)) calc(12px + var(--sr)) calc(14px + var(--sb)) calc(12px + var(--sl)); background: linear-gradient(180deg,#0ea5e9,#6d28d9); color: #fff; text-align: center; overflow-y: auto; }
+.ovl.crime { background: linear-gradient(180deg,#1e293b,#7c2d12); justify-content: flex-start; }
+.ovl .wTop { width: min(560px, 100%); }
+.insBox { position: relative; width: min(440px, 100%); padding: 18px 16px; border-radius: 26px; background: rgba(255,255,255,.14); border: 4px solid rgba(255,255,255,.7); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.insBox h2 { font-size: 24px; margin: 0; } .insBox p { font-size: 17px; line-height: 1.35; margin: 0; } .insBox .sub { color: #e0e7ff; font-size: 15px; }
+.insBox .btncol { width: 100%; display: flex; flex-direction: column; gap: 8px; } .insBox .btn { width: 100%; }
+.insFace { font-size: 64px; line-height: 1; }
+.holdBar { width: 100%; height: 14px; border-radius: 7px; background: rgba(0,0,0,.3); overflow: hidden; } .holdBar em { display: block; height: 100%; width: 0; background: #facc15; transition: width .4s; }
+.wantedBig { font-size: 40px; color: #facc15; letter-spacing: 4px; text-shadow: 0 3px 0 rgba(0,0,0,.35); }
+.hzBox { width: min(440px, 100%); padding: 14px; border-radius: 22px; background: rgba(0,0,0,.25); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.hzLane { position: relative; width: 100%; height: 90px; border-radius: 16px; background: repeating-linear-gradient(90deg,#334155 0 22px,#1e293b 22px 44px); overflow: hidden; }
+.hzLane i { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -3px; background: #22c55e; box-shadow: 0 0 12px #22c55e; }
+.hzLane i.near { background: #ef4444; box-shadow: 0 0 14px #ef4444; }
+.hzLane b { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: 46px; }
+.hzLane::after { content: ''; position: absolute; top: 0; bottom: 0; left: 20%; width: 60%; background: rgba(239,68,68,.12); border-left: 2px dashed rgba(239,68,68,.6); border-right: 2px dashed rgba(239,68,68,.6); }
+.hzDial { position: relative; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle,#94a3b8 0 30%,#475569 31% 100%); border: 6px solid #e2e8f0; }
+.hzDial em, .hzDial i { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.hzDial em::before { content: ''; position: absolute; left: -14px; top: -86px; width: 28px; height: 22px; border-radius: 8px; background: #facc15; box-shadow: 0 0 10px #facc15; }
+.hzDial i::before { content: ''; position: absolute; left: -4px; top: -80px; width: 8px; height: 80px; border-radius: 4px; background: #ef4444; }
+.ovl .btn.hzBig { color: #fff; min-height: 84px; font-size: 24px; width: min(360px, 100%); }
+.ovl .wField { width: min(560px, 100%); min-height: 52vh; }
+.insBox.jail { background: rgba(30,41,59,.85); overflow: hidden; }
+.insBox.jail .bars { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 34px, rgba(203,213,225,.35) 34px 40px); pointer-events: none; }
+.insBox.jail > *:not(.bars) { position: relative; }
+/* keep the phone + mute buttons fully on screen on narrow phones (390px) */
+#topbar .pill { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+#topbar #moneyPill { flex: 0 0 auto; }
+@media (max-width: 430px) { #topbar .pill { padding: 0 9px; } #clockPill { font-size: 13px; } #moneyPill { min-width: 0; } #moneyN { font-size: 16px; } #topbar { gap: 5px; } }
+body.inOvl #toasts { top: auto; bottom: calc(16px + var(--sb)); }

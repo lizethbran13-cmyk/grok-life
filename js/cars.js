@@ -24,6 +24,10 @@ C.honk = () => { if (C.driving()) Snd.fx(work ? 'siren' : 'honk'); };
 C.workCar = function (type, x, z, yaw) { kill(work); if (my) my.drive = false; work = mk(type, null, x, z, yaw); work.drive = true; work.work = true; GS.me.act = null; return work; };
 C.endWork = function (x, z) { if (!work) return; kill(work); work = null; if (x != null) { const f = W.freeNear(W.areas.town, x, z, 0.4); GS.me.x = f[0]; GS.me.z = f[1]; } };
 C.workObj = () => work;
+// helpers for feature modules (ambulance, police, animal control van)
+C.makeCar = (type, col, x, z, yaw) => mk(type, col, x, z, yaw);
+C.placeCar = (o) => place(o);
+C.killCar = (o) => kill(o);
 function seatPos(o, i) { const s = o.m.seats[Math.min(i, o.m.seats.length - 1)], c = Math.cos(o.yaw), sn = Math.sin(o.yaw); return { x: o.x + s[0] * c + s[2] * sn, z: o.z - s[0] * sn + s[2] * c, y: s[1] - 0.45, yaw: o.yaw }; }
 C.mySeat = function () { const o = cur(); if (o) return seatPos(o, 0); if (GS.me.ride) { const r = remote[GS.me.ride]; if (r) { const others = Object.keys(GS.pos).filter((k) => GS.pos[k].rd === GS.me.ride && k < GS.pid).length; return seatPos(r, 1 + others); } } return null; };
 C.remoteSeat = function (pid, pos) { if (pos.c && pos.c[5]) { const r = remote[pid]; if (r) return seatPos(r, 0); } if (pos.rd) { const r = pos.rd === GS.pid ? cur() : remote[pos.rd]; if (r) { const n = Object.keys(GS.pos).filter((k) => GS.pos[k].rd === pos.rd && k < pid).length + (pos.rd !== GS.pid && GS.me.ride === pos.rd && GS.pid < pid ? 1 : 0); return seatPos(r, 1 + n); } } return null; };
@@ -61,7 +65,7 @@ function drive(o, dt) {
   o.v = clamp(o.v, -6, sp.top);
   o.yaw += st * 2.0 * clamp(o.v / 5, -1, 1) * dt;
   const fx = Math.sin(o.yaw), fz = Math.cos(o.yaw), nx = o.x + fx * o.v * dt, nz = o.z + fz * o.v * dt;
-  if (blocked(o, nx, nz)) { if (Math.abs(o.v) > 4) Snd.fx('bump'); o.v = -o.v * 0.25; }
+  if (blocked(o, nx, nz)) { const hv = Math.abs(o.v); if (hv > 4) Snd.fx('bump'); o.v = -o.v * 0.25; if (hv > 4 && G.onCrash) G.onCrash(hv, !!o.work); }
   else { const d = Math.hypot(nx - o.x, nz - o.z); o.x = nx; o.z = nz; sv().stats.drive += d; }
   o.m.wheels.forEach((w) => { w.children[0].rotation.x += o.v * dt / o.m.wr; });
   GS.me.x = o.x; GS.me.z = o.z; GS.me.yaw = o.yaw;
@@ -84,6 +88,7 @@ function trafficTick(dt) {
   for (const k in remote) blockers.push([remote[k].x, remote[k].z]);
   for (const k in GS.pos) { const p = GS.pos[k]; if (p.a === 'town') blockers.push([p.x, p.z]); }
   if (GL.NPC) GL.NPC.list.forEach((n) => { if (n.inTown) blockers.push([n.x, n.z]); });
+  if (G.extraBlockers) G.extraBlockers(blockers);
   traffic.forEach((o) => blockers.push([o.x, o.z, o]));
   traffic.forEach((o) => {
     const b = RING[(o.seg + 1) % 4], dx = b[0] - o.x, dz = b[1] - o.z, d = Math.hypot(dx, dz);

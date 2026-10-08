@@ -7,14 +7,14 @@ const P = GL.Pets = {};
 let p3 = {}, rp = {};
 P.look = (p) => ({ sp: p.sp, col: p.col, eye: p.eye, oneEye: p.oneEye, lv: 7, acc: p.acc || {} });
 GL.cleanPetLook = function (l) { if (!l || !GL.SPECIES[l.sp] || !Array.isArray(l.col)) return null; const hex = (c) => /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#cccccc'; const acc = {}; if (l.acc) for (const k in l.acc) if (GL.PET_ACC[l.acc[k]]) acc[k] = l.acc[k]; return { sp: l.sp, col: [hex(l.col[0]), hex(l.col[1])], eye: /^#[0-9a-f]{6}$/i.test(l.eye || '') ? l.eye : undefined, oneEye: l.oneEye ? 1 : 0, lv: 7, acc, n: String(l.n || '').slice(0, 12) }; };
-P.activeLooks = () => sv().pets.filter((p) => p.out).slice(0, 2).map((p) => Object.assign(P.look(p), { n: p.name }));
+P.activeLooks = () => sv().pets.filter((p) => p.out && !p.missing).slice(0, 2).map((p) => Object.assign(P.look(p), { n: p.name }));
 P.adopt = function (sp, name, fam) {
   const s = sv(), S = GL.SPECIES[sp];
   const p = { id: s.nextPet++, sp, name: name || S.name, col: fam ? fam.col.slice() : [S.vars[0][1], S.vars[0][2]], acc: fam ? Object.assign({}, fam.acc) : {}, n: { h: 80, f: 80 }, tricks: {}, out: s.pets.filter((q) => q.out).length < 2 };
   if (fam) { p.fam = fam.id; if (fam.eye) p.eye = fam.eye; if (fam.oneEye) p.oneEye = 1; }
   s.pets.push(p); s.bag.kibble = (s.bag.kibble || 0) + 2; G.persist(); Snd.fx(S.snd); G.toast('\uD83D\uDC96 ' + p.name + ' is part of your family! (+2 pet food)'); G.tutNext(4); return p;
 };
-P.toggleOut = function (id) { const s = sv(), p = s.pets.find((q) => q.id === id); if (!p) return; if (!p.out && s.pets.filter((q) => q.out).length >= 2) { G.toast('Two pets can come along at a time.'); return; } p.out = !p.out; G.persist(); };
+P.toggleOut = function (id) { const s = sv(), p = s.pets.find((q) => q.id === id); if (!p) return; if (p.missing) { G.toast(p.name + ' is missing! Call Animal Control (phone \u2192 \uD83D\uDC3E).', true); return; } if (!p.out && s.pets.filter((q) => q.out && !q.missing).length >= 2) { G.toast('Two pets can come along at a time.'); return; } p.out = !p.out; G.persist(); };
 P.care = function (id, what, arg) {
   const s = sv(), p = s.pets.find((q) => q.id === id); if (!p) return; const o = p3[id], S = GL.SPECIES[p.sp];
   if (what === 'pet') { p.n.f = clamp(p.n.f + 10, 0, 100); G.need('f', 3); Snd.fx(S.snd); if (o) { o.P.play('happy', 1.2); W.fx('heart', o.x, 1, o.z, 4, 0.5); } }
@@ -37,7 +37,7 @@ P.tick = function (dt) {
   s.pets.forEach((p) => { p.n.h = Math.max(10, p.n.h - dt * 0.03); p.n.f = Math.max(10, p.n.f - dt * 0.025); });
   const inCar = GL.Cars && (GL.Cars.driving() || m.ride);
   const atHome = A.homeKey === GS.pid;
-  const list = s.pets.filter((p) => p.out || atHome);
+  const list = s.pets.filter((p) => !p.missing && (p.out || atHome));
   list.forEach((p, i) => {
     live[p.id] = 1; const o = ensure(p3, p.id, P.look(p), m.x - 1, m.z - 1);
     if (!o.tag) { o.tag = W.textSprite(p.name, { size: 30, h: 0.26, bg: 'rgba(40,20,70,.75)', border: '#ffd23f' }); o.tag.position.y = (o.P.hTop || 0.8) + 0.35; o.P.g.add(o.tag); }

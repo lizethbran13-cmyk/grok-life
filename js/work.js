@@ -26,8 +26,20 @@ K.request = function (cid) {
   if (GS.work) return;
   if (s.job !== cid) { G.toast(C.icon + ' This is where ' + C.name + 's work. Get the job at City Hall!'); if (s.tut === 2) G.guide = null; return; }
   if (GL.Cars && GL.Cars.driving()) return;
+  if (G.injBlock && G.injBlock()) return;
+  if (G.jailed && G.jailed()) return;
   if (s.needs.e < 12) { G.toast('\uD83D\uDE34 You\u2019re too tired to work. Get some sleep first!', true); return; }
+  if (cid === 'animalcontrol' && GL.Strays) { GL.Strays.startShift(); return; }
   start(cid);
+};
+// results screen for shifts played out in the world (Animal Control van)
+K.external = function (cid, stars, score, note) {
+  const C = GL.CAREERS[cid]; if (ov) ov.remove();
+  GS.work = { cid, overlay: true, spray: false };
+  ov = document.createElement('div'); ov.id = 'workOv'; document.body.appendChild(ov);
+  st = { cid, t: 0, score, miss: 0, done: false, mode: 'ext', targets: [], note };
+  ov.innerHTML = '<div class="wTop"><b>' + C.icon + ' ' + esc(C.name) + ' shift</b><span id="wTime">0s</span><span id="wScore">\u2B50 ' + score + '</span></div><div class="wVerb">Shift over!</div><div id="wBody"></div><button class="btn small wQuit" id="wQuit">OK</button>';
+  finish(stars);
 };
 function friendWorking() { return Object.keys(GS.pos).filter((k) => k !== GS.pid && GS.pos[k].w && GS.pos[k].a === GS.me.area); }
 function start(cid) {
@@ -70,10 +82,11 @@ K.key = function (code) {
   if (st.mode === 'quiz' && !st.done) { const i = ['Digit1', 'Digit2', 'Digit3'].indexOf(code); if (i >= 0) { const b = ov.querySelectorAll('.wOpt')[i]; if (b) answer(b.dataset.o, b); } }
   if (st.done && (code === 'Enter' || code === 'Space')) K.abort(true);
 };
-function finish() {
+function finish(forceStars) {
   if (!st || st.done) return; st.done = true; const s = sv(), cid = st.cid, C = GL.CAREERS[cid], j = s.jobs[cid];
-  const need = st.mode === 'quiz' ? [2, 5, 8] : [5, 12, 20], stars = st.score >= need[2] ? 3 : st.score >= need[1] ? 2 : st.score >= need[0] ? 1 : 0;
-  let pay = stars ? GL.payFor(cid, j.lv, stars) : 10, extra = [];
+  const need = st.mode === 'quiz' ? [2, 5, 8] : [5, 12, 20], stars = typeof forceStars === 'number' ? forceStars : st.score >= need[2] ? 3 : st.score >= need[1] ? 2 : st.score >= need[0] ? 1 : 0;
+  if (st.note) extraNote = st.note; else extraNote = '';
+  let pay = stars ? GL.payFor(cid, j.lv, stars) : 10, extra = []; if (extraNote) extra.push(extraNote);
   const mates = friendWorking(), team = mates.length > 0; let bonus = 0; if (team && stars) { const b = Math.round(pay * 0.25); bonus = b; pay += b; extra.push('\uD83E\uDD1D Teamwork +' + money(b)); }
   if (s.workDay !== G.day() && stars) { s.workDay = G.day(); pay += 50; extra.push('\u2600\uFE0F First shift today +$50'); }
   G.addMoney(pay, 'earn'); j.stars += stars; j.shifts = (j.shifts || 0) + 1; s.stats.shifts++; if (stars === 3) s.stats.perfect++;
@@ -83,6 +96,8 @@ function finish() {
   G.persist(); G.tutNext(3); G.checkGoals && G.checkGoals();
   ov.querySelector('#wBody').innerHTML = '<div class="wCard"><div class="wEmoji">' + ('\u2B50'.repeat(stars) || '\uD83D\uDE05') + '</div><p>' + (stars ? 'Great shift!' : 'Tough shift \u2014 try again!') + ' Score ' + st.score + '</p><div class="big">+' + money(pay) + '</div>' + extra.map((x) => '<p class="sub small">' + x + '</p>').join('') + promo + '<p class="sub small">' + esc(C.titles[j.lv - 1]) + ' \u00b7 \u2B50 ' + j.stars + (GL.LEVEL_STARS[j.lv] != null && j.lv < 5 ? ' / ' + GL.LEVEL_STARS[j.lv] : '') + '</p></div><button class="btn primary" id="wDone">DONE</button>';
   ov.querySelector('#wQuit').remove(); ov.querySelector('#wDone').onclick = () => K.abort(true);
+  if (st.mode !== 'ext') st.mishap = [cid, stars, st.miss];
 }
-K.abort = function (silent) { if (st && !st.done && !silent) finish(); if (ov) ov.remove(); ov = null; st = null; GS.work = null; };
+let extraNote = '';
+K.abort = function (silent) { if (GS.work && GS.work.ac && GL.Strays) { GL.Strays.endShift(true); return; } if (st && !st.done && !silent) finish(); const mh = st && st.done && st.mishap; if (ov) ov.remove(); ov = null; st = null; GS.work = null; if (mh && G.onWorkDone) setTimeout(() => G.onWorkDone(mh[0], mh[1], mh[2]), 300); };
 })();

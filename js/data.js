@@ -56,9 +56,12 @@ GL.CAREERS = {
     titles: ['Grease Monkey', 'Mechanic', 'Master Mechanic', 'Race Engineer', 'Garage Boss'] },
   popstar: { name: 'Pop Star', icon: '\uD83C\uDFA4', place: 'stage', placeName: 'Starlight Stage (Park)', base: 115, col: '#ff4fd8', game: 'popstar',
     desc: 'Sing on stage! Tap the notes to the beat.', uni: { top: 'sparkle', tc: '#ff4fd8', bc: '#1f2937', hat: 'headphones', gl: 'stars' },
-    titles: ['Street Singer', 'Opening Act', 'Rising Star', 'Headliner', 'Superstar'] }
+    titles: ['Street Singer', 'Opening Act', 'Rising Star', 'Headliner', 'Superstar'] },
+  animalcontrol: { name: 'Animal Control', icon: '\uD83D\uDC15\u200D\uD83E\uDDBA', place: 'shelter', placeName: 'Grokville Animal Shelter', base: 135, col: '#84cc16', game: 'animalcontrol', drive: 'acvan',
+    desc: 'Drive the rescue van, net the stray pets in town and bring them to the shelter for adoption!', uni: { top: 'jacket', tc: '#65a30d', bc: '#1f2937', hat: 'cap', hatc: '#f59e0b' },
+    titles: ['Pet Catcher', 'Rescue Ranger', 'Animal Officer', 'Shelter Hero', 'Chief Pet Rescuer'] }
 };
-GL.CAREER_ORDER = ['chef', 'doctor', 'fire', 'police', 'teacher', 'vet', 'clerk', 'mechanic', 'popstar'];
+GL.CAREER_ORDER = ['chef', 'doctor', 'fire', 'police', 'teacher', 'vet', 'clerk', 'mechanic', 'popstar', 'animalcontrol'];
 GL.LEVEL_STARS = [0, 4, 10, 18, 28]; // total stars needed for levels 1..5
 GL.payFor = (cid, lv, stars) => Math.round(GL.CAREERS[cid].base * (1 + 0.3 * (lv - 1)) * (0.6 + 0.2 * stars) / 5) * 5;
 
@@ -73,7 +76,7 @@ GL.CARS = {
   sports: { name: 'Bolt GT Sports Car', price: 4000, top: 25, acc: 12, seats: 2, desc: 'The fastest car in Grokville!' }
 };
 GL.CAR_ORDER = ['golf', 'compact', 'van', 'pickup', 'suv', 'convertible', 'sports'];
-GL.WORK_CARS = { firetruck: { name: 'Fire Truck', top: 19, acc: 9, seats: 3 }, police: { name: 'Police Car', top: 22, acc: 11, seats: 3 } };
+GL.WORK_CARS = { firetruck: { name: 'Fire Truck', top: 19, acc: 9, seats: 3 }, police: { name: 'Police Car', top: 22, acc: 11, seats: 3 }, acvan: { name: 'Rescue Van', top: 18, acc: 10, seats: 3 }, ambulance: { name: 'Ambulance', top: 18, acc: 9, seats: 3 } };
 GL.CAR_COLS = ['#ef4444', '#fb923c', '#facc15', '#4ade80', '#14b8a6', '#38bdf8', '#3b82f6', '#8b5cf6', '#ff4fd8', '#f8fafc', '#1f2937', '#94a3b8'];
 
 /* ---------------- houses ---------------- */
@@ -145,7 +148,11 @@ GL.ITEMS = {
   treat: { name: 'Meaty Treat', icon: '\uD83C\uDF56', price: 15, where: 'pet', cat: 'pet', ph: 30, pf: 15, desc: 'Pets LOVE these. So does Brutus\u2026' },
   veggies: { name: 'Veggie Bowl', icon: '\uD83E\uDD55', price: 10, where: 'pet', cat: 'pet', ph: 40, pf: 6, desc: 'Tortoises and bunnies love it.' },
   seeds: { name: 'Seed Mix', icon: '\uD83C\uDF3B', price: 6, where: 'pet', cat: 'pet', ph: 35, pf: 6, desc: 'Rats and hamsters love it.' },
-  ball: { name: 'Tennis Ball', icon: '\uD83C\uDFBE', price: 20, where: 'pet', cat: 'toy', desc: 'For playing fetch.' }
+  ball: { name: 'Tennis Ball', icon: '\uD83C\uDFBE', price: 20, where: 'pet', cat: 'toy', desc: 'For playing fetch.' },
+  bandage: { name: 'Cartoon Bandage', icon: '\uD83E\uDE79', price: 8, where: 'pharm', cat: 'med', hp: 15, desc: 'For bumps and scrapes. +15 health.' },
+  icepack: { name: 'Ice Pack', icon: '\uD83E\uDDCA', price: 12, where: 'pharm', cat: 'med', hp: 22, desc: 'Cools a bonk. +22 health.' },
+  ointment: { name: 'Owie Ointment', icon: '\uD83E\uDDF4', price: 18, where: 'pharm', cat: 'med', hp: 35, desc: 'Super soothing. +35 health.' },
+  vitamins: { name: 'Gummy Vitamins', icon: '\uD83C\uDF6C', price: 10, where: 'pharm', cat: 'med', hp: 10, e: 10, desc: '+10 health, +10 energy.' }
 };
 GL.itemsAt = (w) => Object.keys(GL.ITEMS).filter((k) => GL.ITEMS[k].where === w);
 GL.RECIPES = [['spaghetti', 'Spaghetti', '\uD83C\uDF5D', 60, 6], ['tacos', 'Tacos', '\uD83C\uDF2E', 60, 8], ['pancakes', 'Pancake Stack', '\uD83E\uDD5E', 55, 10], ['soup', 'Veggie Soup', '\uD83C\uDF72', 65, 4]];
@@ -186,6 +193,30 @@ GL.TRICKS = [['sit', 'Sit', '\u2B07\uFE0F'], ['jump', 'Jump', '\u2B06\uFE0F'], [
 GL.TRICK_NEED = 3;
 GL.stageScale = () => 1;
 
+/* ---------------- health ---------------- */
+/* lv 1 minor (heals with rest / pharmacy), 2 serious (doctor appointment at the clinic), 3 very serious (ambulance + hospital) */
+GL.INJ = {
+  scrape: { lv: 1, name: 'Scraped knee', icon: '\uD83E\uDE79' }, bonk: { lv: 1, name: 'Bonked head', icon: '\uD83E\uDD15' }, bruise: { lv: 1, name: 'Bruised elbow', icon: '\uD83E\uDE79' }, finger: { lv: 1, name: 'Sore finger', icon: '\uD83E\uDE79' },
+  sprain: { lv: 2, name: 'Sprained ankle', icon: '\uD83E\uDDB5' }, wrist: { lv: 2, name: 'Twisted wrist', icon: '\uD83E\uDDBE' },
+  broken: { lv: 3, name: 'Broken leg', icon: '\uD83E\uDDB4' }, bigbonk: { lv: 3, name: 'Super-bonked noggin', icon: '\uD83D\uDCAB' }
+};
+GL.CLINIC_FEE = 40; GL.HOSPITAL_BILL = 420;
+
+/* ---------------- crime (optional + cartoony) ---------------- */
+GL.LOOT = {
+  gem: { name: 'Big Blue Gem', icon: '\uD83D\uDC8E', price: 380 }, crownj: { name: 'Jeweled Crown', icon: '\uD83D\uDC51', price: 300 }, llama: { name: 'Golden Llama Statue', icon: '\uD83E\uDD99', price: 260 },
+  dinoegg: { name: 'Dino Egg Fossil', icon: '\uD83E\uDD5A', price: 220 }, ring: { name: 'Sparkly Ring', icon: '\uD83D\uDC8D', price: 90 }, necklace: { name: 'Pearl Necklace', icon: '\uD83D\uDCFF', price: 120 },
+  watch: { name: 'Fancy Watch', icon: '\u231A', price: 80 }, goldbar: { name: 'Gold Bar', icon: '\uD83E\uDE99', price: 200 }, cashbag: { name: 'Money Bag', icon: '\uD83D\uDCB0', price: 150 }
+};
+/* area: building it's in; hot: id of the display; diff 1..3; stars = wanted level after */
+GL.HEISTS = {
+  gems: { name: 'Gem Gallery', area: 'museum', icon: '\uD83D\uDC8E', diff: 3, stars: 3, loot: { gem: 1, crownj: 1 } },
+  relics: { name: 'Ancient Relics', area: 'museum', icon: '\uD83E\uDD99', diff: 2, stars: 2, loot: { llama: 1, dinoegg: 1 } },
+  jewels: { name: 'Jewelry Cases', area: 'jewelry', icon: '\uD83D\uDC8D', diff: 1, stars: 1, loot: { ring: 2, necklace: 1, watch: 1 } },
+  vault: { name: 'Bank Vault', area: 'bank', icon: '\uD83E\uDE99', diff: 3, stars: 3, loot: { goldbar: 1, cashbag: 2 } }
+};
+GL.JAIL_SECS = 12; GL.FINE = 80;
+
 /* ---------------- goals / achievements ---------------- */
 /* p(save) -> [have, need] */
 GL.GOALS = [
@@ -216,6 +247,8 @@ GL.GOALS = [
   { id: 'gifts5', icon: '\uD83C\uDF81', name: 'Generous', desc: 'Give 5 gifts', p: (s) => [s.stats.gifts, 5], r: 150 },
   { id: 'streak7', icon: '\uD83D\uDCC5', name: 'Every Day!', desc: 'Get a 7-day login streak', p: (s) => [s.daily.best || 0, 7], r: 500 },
   { id: 'stars3', icon: '\uD83C\uDFC6', name: 'Perfect Shift', desc: 'Get 3 stars on a work shift', p: (s) => [s.stats.perfect, 1], r: 150 },
+  { id: 'doc', icon: '\uD83E\uDE7A', name: 'Doctor\u2019s Orders', desc: 'Get patched up at the clinic or hospital', p: (s) => [(s.stats.healed || 0), 1], r: 75 },
+  { id: 'strays5', icon: '\uD83D\uDC36', name: 'Rescue Ranger', desc: 'Bring 5 strays to the shelter', p: (s) => [(s.stats.strays || 0), 5], r: 250 },
   { id: 'grump', icon: '\uD83D\uDE24', name: 'Melted His Heart', desc: 'Make Old Man Grumbleton smile', p: (s) => [s.npc && s.npc.grumble && s.npc.grumble.fr >= 15 ? 1 : 0, 1], r: 400 }
 ];
 })();

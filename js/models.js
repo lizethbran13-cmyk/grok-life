@@ -487,6 +487,21 @@ MD.car = function (type, col) {
       extra.siren = [box(0.5, 0.18, 0.3, M('#ef4444', { emissive: '#ef4444' }), body, 0.3, 1.72, -0.3), box(0.5, 0.18, 0.3, M('#3b82f6', { emissive: '#3b82f6' }), body, -0.3, 1.72, -0.3)];
       [-1, 1].forEach((s) => box(0.03, 0.22, 0.6, '#facc15', body, s * 0.96, 0.75, 0.1));
       break;
+    case 'ambulance':
+      L = 4.6; Wd = 2.0; wr = 0.4; wz = 1.5; seatY = 0.8; seats = [[0.45, 0.8, 1.3], [-0.45, 0.8, 1.3], [0, 0.8, -0.8]];
+      box(2.0, 1.0, 4.6, '#f8fafc', body, 0, 0.9, 0); box(2.0, 1.1, 3.0, '#f8fafc', body, 0, 1.9, -0.75); box(1.8, 0.55, 0.05, GLASS(), body, 0, 1.75, 1.36).rotation.x = -0.2;
+      box(2.02, 0.22, 4.62, '#ef4444', body, 0, 1.15, 0); [-1, 1].forEach((s) => { box(0.05, 0.6, 0.18, '#ef4444', body, s * 1.01, 1.95, -0.8); box(0.05, 0.18, 0.6, '#ef4444', body, s * 1.01, 1.95, -0.8); });
+      box(0.6, 0.18, 0.05, '#ef4444', body, 0, 2.0, -2.26); box(0.18, 0.6, 0.05, '#ef4444', body, 0, 2.0, -2.26);
+      extra.siren = [box(0.45, 0.2, 0.3, M('#ef4444', { emissive: '#ef4444' }), body, 0.4, 2.55, 0.5), box(0.45, 0.2, 0.3, M('#3b82f6', { emissive: '#3b82f6' }), body, -0.4, 2.55, 0.5)];
+      break;
+    case 'acvan':
+      L = 4.4; Wd = 1.95; wr = 0.38; wz = 1.4; seatY = 0.8; seats = [[0.42, 0.8, 1.1], [-0.42, 0.8, 1.1], [0, 0.8, -0.6]];
+      box(1.95, 0.9, 4.4, '#f8fafc', body, 0, 0.85, 0); box(1.9, 0.9, 1.6, '#f8fafc', body, 0, 1.7, 1.2); box(1.75, 0.5, 0.05, GLASS(), body, 0, 1.75, 2.01);
+      box(1.95, 0.25, 4.42, '#65a30d', body, 0, 1.0, 0);
+      { const cage = grp(body, 0, 1.3, -0.95); box(1.8, 0.06, 2.3, '#64748b', cage, 0, 0.95, 0); for (let i = 0; i < 6; i++) { [-0.88, 0.88].forEach((x) => box(0.05, 0.95, 0.05, '#94a3b8', cage, x, 0.47, -1.1 + i * 0.44)); } for (let i = 0; i < 4; i++) box(0.05, 0.95, 0.05, '#94a3b8', cage, -0.66 + i * 0.44, 0.47, -1.15); extra.cage = cage; }
+      extra.siren = [box(0.4, 0.16, 0.25, M('#facc15', { emissive: '#ca8a04' }), body, 0.35, 2.22, 1.2), box(0.4, 0.16, 0.25, M('#f97316', { emissive: '#c2410c' }), body, -0.35, 2.22, 1.2)];
+      { const paw = W_paw(); paw.position.set(1.0, 1.4, 0.4); paw.rotation.y = Math.PI / 2; body.add(paw); const paw2 = W_paw(); paw2.position.set(-1.0, 1.4, 0.4); paw2.rotation.y = -Math.PI / 2; body.add(paw2); }
+      break;
     case 'robber':
       L = 3.8; box(1.8, 0.6, 3.8, '#6d28d9', body, 0, 0.62, 0); box(1.55, 0.55, 1.9, '#6d28d9', body, 0, 1.2, -0.3); box(1.57, 0.4, 1.6, GLASS(), body, 0, 1.22, -0.3);
       for (let i = 0; i < 4; i++) box(1.82, 0.08, 0.2, '#111827', body, 0, 0.75, -1.5 + i * 1.0);
@@ -505,6 +520,7 @@ MD.car = function (type, col) {
   const sh = new T.Mesh(G.box, shadowMat()); sh.scale.set(Wd * 1.05, 0.01, L * 1.02); sh.position.y = 0.015; g.add(sh);
   return Object.assign({ g, body, wheels, seats, L, Wd, wr, seatY, type }, extra);
 };
+function W_paw() { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.font = '48px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('\uD83D\uDC3E', 32, 36); const t = new T.CanvasTexture(c); const m = new T.Mesh(G.plane, new T.MeshBasicMaterial({ map: t, transparent: true, side: T.DoubleSide })); m.scale.set(0.8, 0.8, 1); return m; }
 function W_dollar() { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#16a34a'; x.font = '900 52px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('$', 32, 34); const t = new T.CanvasTexture(c); const m = new T.Mesh(G.plane, new T.MeshBasicMaterial({ map: t, transparent: true })); m.scale.set(0.5, 0.5, 1); return m; }
 
 /* ======================================================================
