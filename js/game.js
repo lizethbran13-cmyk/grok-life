@@ -429,3 +429,307 @@ G.toast = function (msg, bad) {
 };
 function setOnlineMsg(t, ok) { const m = $('onlineMsg'); m.textContent = t || ''; m.className = 'msg' + (ok ? ' ok' : ''); }
 G.setOnlineMsg = setOnlineMsg;
+
+/* ======================================================================
+   Input
+   ====================================================================== */
+const keys = Object.create(null);
+const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+G.keys = keys; G.joy = joy;
+addEventListener('keydown', (e) => {
+  if (e.target && e.target.tagName === 'INPUT') return;
+  keys[e.code] = true;
+  if (e.code === 'KeyM') { toggleMute(); return; }
+  if (!inGame()) return;
+  if (GS.work && GS.work.overlay) { if (GL.Work.key) GL.Work.key(e.code); return; }
+  if (e.code === 'Escape') { if (GS.panel) closePanel(); else if (!$('phone').classList.contains('hidden')) $('phone').classList.add('hidden'); else if (GS.talk) GL.NPC.close(); else $('scrMenu').classList.toggle('hidden'); return; }
+  if (e.repeat || GS.panel || GS.talk) return;
+  if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') { e.preventDefault(); pressAct(); }
+  else if (e.code === 'KeyP' || e.code === 'Tab') { e.preventDefault(); GL.UI.phone(); }
+  else if (e.code === 'KeyH' && GL.Cars) GL.Cars.honk();
+});
+addEventListener('keyup', (e) => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+(function joystick() {
+  if (!IS_TOUCH) document.body.classList.add('kbd');
+  const zone = $('joyzone'), base = $('joybase'), knob = $('joyknob'), R = 52;
+  const home = () => { base.style.left = ''; base.style.top = ''; knob.style.transform = ''; };
+  zone.addEventListener('pointerdown', (e) => {
+    Snd.init(); if (joy.id !== null) return; joy.id = e.pointerId; try { zone.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ }
+    const r = zone.getBoundingClientRect(); joy.ox = e.clientX; joy.oy = e.clientY; base.style.left = (e.clientX - r.left) + 'px'; base.style.top = (e.clientY - r.top) + 'px'; joy.x = joy.y = 0; $('joyhint').classList.add('hidden'); e.preventDefault();
+  });
+  zone.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== joy.id) return; let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; }
+    joy.x = dx / R; joy.y = dy / R; if (Math.hypot(joy.x, joy.y) < 0.12) { joy.x = joy.y = 0; } knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+  });
+  const up = (e) => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; home(); };
+  zone.addEventListener('pointerup', up); zone.addEventListener('pointercancel', up); zone.addEventListener('lostpointercapture', up);
+  GS.joyReset = () => { joy.id = null; joy.x = joy.y = 0; home(); };
+})();
+G.input = function () { // world-space move input (-1..1)
+  let ix = joy.x, iz = joy.y;
+  if (keys.KeyA || keys.ArrowLeft) ix -= 1; if (keys.KeyD || keys.ArrowRight) ix += 1; if (keys.KeyW || keys.ArrowUp) iz -= 1; if (keys.KeyS || keys.ArrowDown) iz += 1;
+  const m = Math.hypot(ix, iz); if (m > 1) { ix /= m; iz /= m; } return [ix, iz, Math.min(1, m)];
+};
+(function taps() {
+  const cv = $('c'); let down = null;
+  cv.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; Snd.init(); });
+  cv.addEventListener('pointerup', (e) => { if (!down) return; const d = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t; down = null; if (d < 16 && dt < 600) tapAt(e.clientX, e.clientY); });
+})();
+function tapAt(x, y) {
+  if (GS.decor && GL.UI.decorTap) { GL.UI.decorTap(x, y); return; }
+  if (!freeToAct() || (GL.Cars && GL.Cars.driving())) return;
+  if (GS.me.act) { endAct(); return; }
+  const tn = GL.NPC && GL.NPC.hit(x, y);
+  if (tn) { const d = Math.hypot(tn.x - GS.me.x, tn.z - GS.me.z); if (d <= 2.6) GL.NPC.talk(tn); else GS.goal = { x: tn.x, z: tn.z, npc: tn, best: 1e9, stuck: 0 }; return; }
+  let best = null, bd = 50;
+  for (const h of W.cur.hots) { const p = W.project(h.x, 0.8, h.z), d = Math.hypot(p.x - x, p.y - y); if (p.vis && d < bd) { bd = d; best = h; } }
+  if (best) { const d = Math.hypot(best.x - GS.me.x, best.z - GS.me.z); if (d <= best.reach) interact(best); else GS.goal = { x: best.x, z: best.z, hot: best, best: 1e9, stuck: 0 }; return; }
+  const p = W.rayPlane(x, y, 0.08); if (p) GS.goal = { x: p.x, z: p.z, best: 1e9, stuck: 0 };
+}
+function actTarget() {
+  if (!freeToAct()) return null;
+  if (GL.Cars) { const c = GL.Cars.actTarget(); if (c) return c; }
+  if (GS.me.act) return { kind: 'stop', label: 'STOP', name: GS.me.act.name || '', x: GS.me.x, z: GS.me.z };
+  const h = nearestHot(), nn = GL.NPC ? GL.NPC.nearest(GS.me.x, GS.me.z) : null;
+  if (nn && (!h || nn.d < Math.hypot(h.x - GS.me.x, h.z - GS.me.z))) return { kind: 'npc', n: nn.n, label: 'TALK', name: nn.n.def.name, x: nn.n.x, z: nn.n.z, py: 2.4 };
+  return h;
+}
+function pressAct() {
+  Snd.init(); const t = actTarget(); if (!t) return;
+  if (t.kind === 'stop') { endAct(); return; }
+  if (t.kind === 'npc') { GL.NPC.talk(t.n); return; }
+  if (t.car) { GL.Cars.act(t); return; }
+  interact(t);
+}
+G.pressAct = pressAct;
+function holdBtn(el, fn) { el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); fn(); }); }
+holdBtn($('bAct'), pressAct);
+$('bPhone').onclick = () => { Snd.init(); Snd.fx('click'); if (inGame()) GL.UI.phone(); };
+$('bMute').onclick = () => { Snd.init(); toggleMute(); };
+$('bEmote').onclick = () => { Snd.init(); if (freeToAct()) GL.UI.emotes(); };
+$('needsBar').onclick = () => { if (freeToAct()) GL.UI.needs(); };
+function toggleMute() { const m = !Snd.isMuted(); Snd.setMuted(m); save.muted = m; persist(); $('bMute').innerHTML = m ? '\uD83D\uDD07' : '\uD83D\uDD0A'; }
+G.toggleMute = toggleMute;
+$('bMute').innerHTML = Snd.isMuted() ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+
+/* ======================================================================
+   Me + avatars
+   ====================================================================== */
+function updateMe(dt) {
+  const m = GS.me;
+  if (GL.Cars && (GL.Cars.driving() || m.ride)) { m.sp = 0; return; }
+  if (m.act) { m.sp = 0; return; }
+  let [ix, iz, mag] = (GS.panel || GS.talk || GS.decor || (GS.work && GS.work.overlay)) ? [0, 0, 0] : G.input();
+  if (mag > 0.05) GS.goal = null;
+  else if (GS.goal) {
+    const g = GS.goal; if (g.npc) { g.x = g.npc.x; g.z = g.npc.z; }
+    const dx = g.x - m.x, dz = g.z - m.z, d = Math.hypot(dx, dz), stop = g.npc ? 2.0 : g.hot ? Math.max(0.6, g.hot.reach - 0.3) : 0.2;
+    if (d <= stop) { const h = g.hot, n = g.npc; GS.goal = null; if (n) GL.NPC.talk(n); else if (h) interact(h); }
+    else { ix = dx / d; iz = dz / d; mag = 1; if (d < g.best - 0.05) { g.best = d; g.stuck = 0; } else { g.stuck += dt; if (g.stuck > 0.6) GS.goal = null; } }
+  }
+  const slow = G.lowNeed() ? 0.8 : 1, sp = (W.cur.outdoor ? 6.4 : 4.6) * mag * slow;
+  if (mag > 0.05) {
+    const r = W.move(W.cur, m.x, m.z, ix * sp * dt, iz * sp * dt, 0.36), moved = Math.hypot(r[0] - m.x, r[1] - m.z);
+    m.x = r[0]; m.z = r[1]; m.sp = moved / Math.max(dt, 1e-3); save.stats.walk += moved;
+    m.yaw += ang(Math.atan2(ix, iz) - m.yaw) * Math.min(1, dt * 12);
+  } else m.sp = 0;
+}
+function lookKey(l) { return JSON.stringify(l); }
+function ensureAvatar(pid, look, name, color, isMe) {
+  let a = GS.av[pid]; const lk = lookKey(look);
+  if (a && a.lk !== lk) { const keep = a; W.scene.remove(a.ch.g); a = null; GS.av[pid] = null; void keep; }
+  if (!a) { const ch = MD.avatar(look); W.scene.add(ch.g); a = GS.av[pid] = { ch, lk, x: 0, z: 0, yaw: 0, init: false, tag: null, name: null }; }
+  if (a.name !== name) { if (a.tag) a.ch.g.remove(a.tag); a.tag = W.textSprite(isMe ? name + ' (you)' : name, { size: 36, h: isMe ? 0.32 : 0.42, bg: 'rgba(40,20,70,.85)', border: color }); a.tag.position.set(0, 2.3, 0); a.ch.g.add(a.tag); a.name = name; }
+  return a;
+}
+function moodTag(a, icon) {
+  if (a.moodI === icon) return; if (a.mood) a.ch.g.remove(a.mood); a.mood = null; a.moodI = icon;
+  if (icon) { a.mood = W.textSprite(icon, { size: 40, h: 0.42, bg: 'rgba(255,255,255,.92)', border: '#ff6b86' }); a.mood.position.y = 2.75; a.ch.g.add(a.mood); }
+}
+function placeAvatar(a, x, z, yaw, dt, sp, act, actYaw, ay) {
+  const g = a.ch.g;
+  if (act && act.pose) { g.position.set(act.x, 0.05 + (act.y || 0), act.z); g.rotation.y = act.yaw; a.ch.pose(act.pose); a.ch.anim(dt, 0, false, act.act); return; }
+  a.ch.pose(null); g.position.set(x, 0.05 + (act && act.y ? act.y : 0), z); g.rotation.y = act ? act.yaw : yaw;
+  a.ch.anim(dt, sp, a.waveT > 0, act ? (act.act || (act.kind === 'shower' ? 'shower' : act.kind === 'dance' ? 'dance' : null)) : (a.emote === 'dance' ? 'dance' : GS.work && a.isMe && GS.work.spray ? 'spray' : null));
+  void actYaw; void ay;
+}
+function updateAvatars(dt) {
+  const S = S_(), TC = teamColors(S), mates = S.players.filter((p) => p.pid !== GS.pid);
+  const me = ensureAvatar(GS.pid, G.curLook(), myName(), TC[GS.pid] || prof.color, true); me.isMe = true;
+  me.tag.visible = mates.length > 0;
+  const car = GL.Cars ? GL.Cars.mySeat() : null;
+  me.waveT = (me.waveT || 0) - dt; me.emote = GS.emoteT > 0 ? GS.emote : null; GS.emoteT -= dt; if (GS.emoteT > 0 && GS.emote === 'wave') me.waveT = 0.2;
+  if (car) { me.ch.g.visible = true; placeAvatar(me, 0, 0, 0, dt, 0, { pose: 'drive', x: car.x, z: car.z, y: car.y, yaw: car.yaw }); }
+  else { me.ch.g.visible = true; placeAvatar(me, GS.me.x, GS.me.z, GS.me.yaw, dt, GS.me.sp, GS.me.act); }
+  moodTag(me, GS.me.act && GS.me.act.kind === 'sleep' ? '' : (G.lowNeed() ? G.NEEDS[G.lowNeed()][1] : ''));
+  const live = {}; live[GS.pid] = 1;
+  mates.forEach((p) => {
+    live[p.pid] = 1; const pos = GS.pos[p.pid], lk = S.looks[p.pid]; const a = ensureAvatar(p.pid, lk ? lk.av : GL.defaultLook(), p.name, TC[p.pid] || p.color, false);
+    if (!pos || pos.a !== GS.me.area) { a.ch.g.visible = false; a.init = false; return; }
+    if (!a.init) { a.x = pos.x; a.z = pos.z; a.yaw = pos.r; a.init = true; }
+    const k = 1 - Math.exp(-dt * 12), ox = a.x, oz = a.z;
+    a.x += (pos.x - a.x) * k; a.z += (pos.z - a.z) * k; a.yaw += ang(pos.r - a.yaw) * k;
+    a.ch.g.visible = true; a.emote = pos.e; a.waveT = pos.e === 'wave' ? 0.2 : 0;
+    const seat = GL.Cars ? GL.Cars.remoteSeat(p.pid, pos) : null;
+    if (seat) placeAvatar(a, 0, 0, 0, dt, 0, { pose: 'drive', x: seat.x, z: seat.z, y: seat.y, yaw: seat.yaw });
+    else if (pos.act) placeAvatar(a, a.x, a.z, a.yaw, dt, 0, { pose: pos.act === 'sit' || pos.act === 'lie' ? pos.act : null, kind: pos.act, act: pos.act === 'game' ? 'game' : pos.act === 'work' ? 'work' : null, x: pos.ax, z: pos.az, yaw: pos.ay });
+    else placeAvatar(a, a.x, a.z, a.yaw, dt, pos.m ? 4 : Math.hypot(a.x - ox, a.z - oz) / Math.max(dt, 1e-3));
+  });
+  for (const k in GS.av) if (!live[k] && GS.av[k]) { W.scene.remove(GS.av[k].ch.g); delete GS.av[k]; }
+}
+function teamColors(S) { const out = {}, used = {}; S.players.forEach((p) => { let c = GN.cleanColor(p.pid === GS.pid ? prof.color : p.color); if (used[c]) c = GN.COLORS.find((q) => !used[q]) || c; used[c] = 1; out[p.pid] = c; }); return out; }
+G.teamColors = () => teamColors(S_());
+function friendNear(r) { const S = S_(); if (!S) return false; return S.players.some((p) => { if (p.pid === GS.pid) return false; const q = GS.pos[p.pid]; return q && q.a === GS.me.area && Math.hypot(q.x - GS.me.x, q.z - GS.me.z) < (r || 6); }); }
+G.friendNear = friendNear;
+
+/* ======================================================================
+   Clock
+   ====================================================================== */
+function tickClock(dt) {
+  const S = S_(); if (!S) return;
+  if (GS.role !== 'client') {
+    const before = S.clock; S.clock += dt; // 1 real second = 1 game minute
+    if (S.clock >= 1440) { S.clock -= 1440; S.day++; newDay(); }
+    if (Math.floor(before / 10) !== Math.floor(S.clock / 10)) touch();
+  } else S.clock = (S.clock + dt) % 1440;
+}
+function newDay() {
+  if (save.rent && save.house === 'bungalow' && save.rent !== 'own') { if (save.money >= GL.HOUSES.bungalow.rent) { save.money -= GL.HOUSES.bungalow.rent; G.toast('\uD83C\uDFE0 Rent paid: ' + GL.money(GL.HOUSES.bungalow.rent)); } else G.toast('\uD83C\uDFE0 Rent is due! The landlord will wait a bit.', true); }
+  if (save.savings > 0) { const i = Math.min(200, Math.round(save.savings * 0.01)); save.savings += i; if (i) G.toast('\uD83C\uDFE6 Savings interest: +' + GL.money(i)); }
+  if (GL.NPC && GL.NPC.newDay) GL.NPC.newDay();
+  persist();
+}
+G.skipTo = function (min) { const S = S_(); if (!S || GS.role === 'client') return; if (min <= S.clock) { S.day++; newDay(); } S.clock = min; touch(); };
+G.tutNext = function (step) { if (save.tut !== step) return; save.tut++; persist(); Snd.fx('sparkle'); if (save.tut === 5) { G.addMoney(100); G.toast('\uD83C\uDF89 Tutorial complete! +$100. Enjoy Grok Life!'); } };
+
+/* ======================================================================
+   HUD
+   ====================================================================== */
+let promptKey = '', hudT = 0;
+function updateHUD(dt) {
+  GS.moneyFlash = Math.max(0, (GS.moneyFlash || 0) - dt * 2);
+  $('moneyN').textContent = GL.money(save.money); $('moneyPill').style.transform = GS.moneyFlash > 0 ? 'scale(' + (1 + GS.moneyFlash * 0.15) + ')' : '';
+  $('clockN').textContent = (W.isNight(G.clock()) ? '\uD83C\uDF19 ' : '\u2600\uFE0F ') + G.timeStr() + ' \u00b7 Day ' + G.day();
+  const t = actTarget(), act = $('bAct'), pr = $('prompt');
+  const label = t ? t.label : (GL.Cars && GL.Cars.driving() ? 'EXIT' : '\u2022');
+  if ($('actT').textContent !== label) $('actT').textContent = label;
+  act.className = t ? (t.kind === 'door' || t.kind === 'exit' || t.kind === 'apt' || t.kind === 'house' ? 'door' : t.kind === 'npc' ? 'talk' : '') : 'dim';
+  if (t && t.name && !(GL.Cars && GL.Cars.driving())) { const p = W.project(t.x, t.py || 1.9, t.z), k = (t.id || t.kind) + label + t.name; if (k !== promptKey) { promptKey = k; pr.innerHTML = (t.kind === 'npc' ? '\uD83D\uDCAC ' : '') + '<b>' + esc(label) + '</b> ' + esc(t.name); } pr.style.left = Math.round(p.x) + 'px'; pr.style.top = Math.round(p.y) + 'px'; pr.classList.remove('hidden'); }
+  else { pr.classList.add('hidden'); promptKey = ''; }
+  $('bEmote').classList.toggle('hidden', !(G.online() && friendNear(8)));
+  hudT -= dt; if (hudT <= 0) {
+    hudT = 0.3;
+    $('needsBar').innerHTML = NEED_KEYS.map((k) => { const v = save.needs[k]; return '<span class="nd' + (v < 25 ? ' low' : '') + '"><i>' + G.NEEDS[k][1] + '</i><em><b style="width:' + Math.round(v) + '%;background:' + (v < 25 ? '#ef4444' : v < 50 ? '#f59e0b' : '#22c55e') + '"></b></em></span>'; }).join('') + '<span class="moodF">' + G.moodFace() + '</span>';
+    const A = W.cur; $('areaN').textContent = A.zone ? A.zone(GS.me.x, GS.me.z) : (A.label || '');
+    const online = G.online() && GS.room, S = S_(); $('roomPill').classList.toggle('hidden', !online); if (online) $('roomN').textContent = GS.room.code + ' \u00b7 ' + S.players.length + '/3';
+    const TC = teamColors(S); $('mates').innerHTML = S.players.filter((p) => p.pid !== GS.pid).map((p) => '<div class="mate" style="--c:' + esc(TC[p.pid] || p.color) + '">' + esc(p.name) + ' \u00b7 ' + esc(GS.pos[p.pid] ? areaLabel(GS.pos[p.pid]) : '\u2026') + '</div>').join('');
+    if (GL.UI && GL.UI.tutHud) GL.UI.tutHud();
+  }
+}
+function areaLabel(q) { const A = W.areas[q.a]; if (!A) return q.a.indexOf('h_') === 0 ? 'at a house' : '\u2026'; return A.zone ? A.zone(q.x, q.z) : A.label; }
+G.areaLabel = areaLabel;
+// screen-edge guide arrow toward a town spot
+G.guide = null;
+function updateGuide() {
+  const el = $('guide'), g = G.guide;
+  if (!g || !inGame() || W.cur.id !== (g.area || 'town')) { el.classList.add('hidden'); return; }
+  const p = W.project(g.x, 1, g.z), m = 50, w = innerWidth, h = innerHeight;
+  const on = p.vis && p.x > m && p.x < w - m && p.y > 90 && p.y < h - 140;
+  let x = p.x, y = p.y; if (!p.vis) { x = w - x; y = h - y; }
+  const cx = w / 2, cy = h / 2, dx = x - cx, dy = y - cy, a = Math.atan2(dy, dx);
+  if (!on) { const s = Math.min((w / 2 - m) / Math.abs(dx || 1e-3), (h / 2 - 120) / Math.abs(dy || 1e-3)); x = cx + dx * s; y = cy + dy * s; }
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.querySelector('i').style.transform = on ? 'rotate(90deg)' : 'rotate(' + a + 'rad)'; el.querySelector('b').textContent = g.label || '';
+  el.classList.remove('hidden');
+}
+
+/* ======================================================================
+   Loop
+   ====================================================================== */
+let last = performance.now(), titleT = 0, slowT = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const S = S_();
+  renderScreens();
+  W.tickFx(dt);
+  if (inGame()) {
+    processEvents(); tickClock(dt); decayNeeds(dt); tickAct(dt);
+    if (GS.role !== 'client') assignHomes(); applyHomes();
+    updateMe(dt);
+    if (GL.Cars) GL.Cars.tick(dt);
+    if (GL.NPC) GL.NPC.tick(dt);
+    if (GL.Pets) GL.Pets.tick(dt);
+    if (GL.Work) GL.Work.tick(dt);
+    updateAvatars(dt); updateHUD(dt); updateGuide();
+    W.setClock(G.clock()); W.updateSigns(G.clock());
+    const fp = GL.Cars && GL.Cars.camTarget(); W.updateCamera(fp ? fp[0] : GS.me.x, fp ? fp[1] : GS.me.z, dt);
+    slowT -= dt; if (slowT <= 0) { slowT = 2; checkGoals(); syncMe(); }
+    if (now - saveT > 6000) persist(now);
+  } else {
+    titleT += dt;
+    if (!W.cur || W.cur.id !== 'town') W.setArea('town');
+    W.setClock(600); W.camZoom = 1.4;
+    W.updateCamera(Math.sin(titleT * 0.1) * 30, Math.cos(titleT * 0.08) * 26, dt);
+    if (GL.NPC) GL.NPC.tick(dt);
+  }
+  netTick(now);
+  W.render();
+}
+function renderScreens() {
+  const ui = GS.ui;
+  $('scrTitle').classList.toggle('hidden', ui !== 'title');
+  $('scrOnline').classList.toggle('hidden', ui !== 'online');
+  $('hud').classList.toggle('hidden', ui !== 'game' || !!(GS.work && GS.work.overlay) || GS.creating);
+}
+
+/* ======================================================================
+   Title
+   ====================================================================== */
+(function titleUI() {
+  const ni = $('nameIn'); ni.value = prof.name;
+  ni.addEventListener('input', () => { prof.name = ni.value.trim() ? GN.cleanName(ni.value) : ''; save.name = prof.name; persist(); });
+  const row = $('colorRow');
+  const draw = () => { row.innerHTML = GN.COLORS.map((c) => '<button type="button" data-c="' + c + '" style="background:' + c + '" class="' + (c === prof.color ? 'on' : '') + '" aria-label="color"></button>').join(''); };
+  draw(); row.addEventListener('click', (e) => { const b = e.target.closest('[data-c]'); if (!b) return; prof.color = b.dataset.c; save.color = prof.color; persist(); draw(); Snd.init(); Snd.fx('click'); });
+  const need = () => { if (!prof.name) { prof.name = 'Lizeth'; ni.value = prof.name; save.name = prof.name; persist(); } GN.saveProfile(prof.name, prof.color); };
+  const then = (fn) => { if (!save.created) { GL.UI.creator('new', fn); } else fn(); };
+  $('bSolo').onclick = () => { Snd.init(); need(); then(startSolo); };
+  $('bOnline').onclick = () => { Snd.init(); need(); then(() => { GS.ui = 'online'; setOnlineMsg(''); }); };
+  $('bOnlineBack').onclick = () => { leaveSession(); GS.ui = 'title'; };
+  $('bHost').onclick = () => { Snd.init(); need(); hostOnline(); };
+  const ci = $('codeIn'); ci.addEventListener('input', () => { ci.value = GN.normalizeCode(ci.value); });
+  ci.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('bJoin').click(); });
+  $('bJoin').onclick = () => { Snd.init(); need(); joinOnline(ci.value); };
+  $('bResume').onclick = () => $('scrMenu').classList.add('hidden');
+  $('bQuit').onclick = () => { persist(); leaveSession(); };
+  $('arcadeLink').href = GN.hubUrl();
+})();
+
+/* ---------------- boot ---------------- */
+G.boot = function () {
+  W.init($('c')); W.build(); W.setArea('town');
+  if (GL.NPC) GL.NPC.init(); if (GL.UI && GL.UI.init) GL.UI.init();
+  addEventListener('resize', () => W.resize());
+  addEventListener('pagehide', () => persist());
+  document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); });
+  requestAnimationFrame(frame);
+  (function fromHub() {
+    const prm = GN.params(); if (!prm) return;
+    GS.fromHub = true; prof.name = prm.name; prof.color = prm.color; $('nameIn').value = prm.name;
+    const go = () => { if (prm.mode === 'host') hostOnline(prm.code); else { $('codeIn').value = prm.code; joinOnline(prm.code); } };
+    if (!save.created) GL.UI.creator('new', go); else go();
+  })();
+};
+G.startSolo = startSolo; G.hostOnline = hostOnline; G.joinOnline = joinOnline; G.leaveSession = leaveSession;
+
+/* test hooks */
+window.__gl = {
+  G, GS, W, GL, save: () => save, state: () => GS.S,
+  tp(x, z) { GS.me.x = x; GS.me.z = z; GS.goal = null; },
+  go(area, at) { closePanel(); travel(area, true, at); },
+  hot(id) { const h = W.cur.hots.find((q) => q.id === id); if (!h) return 'nohot'; const f = W.freeNear(W.cur, h.x, h.z, 0.36); GS.me.x = f[0]; GS.me.z = f[1]; interact(h); return GS.panel || 'none'; },
+  panel: () => GS.panel,
+  net: () => ({ role: GS.role, code: GS.room && GS.room.code, players: GS.S ? GS.S.players.map((p) => p.name) : [], area: GS.me.area, pos: GS.pos, assign: GS.S && GS.S.assign })
+};
+})();
