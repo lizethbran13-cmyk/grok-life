@@ -64,13 +64,13 @@ GL.payFor = (cid, lv, stars) => Math.round(GL.CAREERS[cid].base * (1 + 0.3 * (lv
 
 /* ---------------- cars ---------------- */
 GL.CARS = {
-  golf: { name: 'Putt-Putt Golf Cart', price: 1200, top: 10, acc: 6, seats: 2, desc: 'Slow, silly and super fun.' },
-  compact: { name: 'Zippy Hatchback', price: 3500, top: 16, acc: 8, seats: 3, desc: 'Small, zippy and easy to park.' },
-  van: { name: 'Groovy Retro Van', price: 5500, top: 14, acc: 7, seats: 3, desc: 'Peace, love and road trips!' },
-  pickup: { name: 'Ranch Hand Pickup', price: 7000, top: 17, acc: 8, seats: 3, desc: 'Tough truck with a big bed.' },
-  suv: { name: 'Trail Boss SUV', price: 9000, top: 18, acc: 8.5, seats: 3, desc: 'Big, comfy family cruiser.' },
-  convertible: { name: 'Sunset Convertible', price: 12500, top: 21, acc: 10, seats: 2, desc: 'Top down, wind in your hair.' },
-  sports: { name: 'Bolt GT Sports Car', price: 18000, top: 25, acc: 12, seats: 2, desc: 'The fastest car in Grokville!' }
+  golf: { name: 'Putt-Putt Golf Cart', price: 400, top: 10, acc: 6, seats: 2, desc: 'Slow, silly and super fun.' },
+  compact: { name: 'Zippy Hatchback', price: 900, top: 16, acc: 8, seats: 3, desc: 'Small, zippy and easy to park.' },
+  van: { name: 'Groovy Retro Van', price: 1300, top: 14, acc: 7, seats: 3, desc: 'Peace, love and road trips!' },
+  pickup: { name: 'Ranch Hand Pickup', price: 1600, top: 17, acc: 8, seats: 3, desc: 'Tough truck with a big bed.' },
+  suv: { name: 'Trail Boss SUV', price: 2000, top: 18, acc: 8.5, seats: 3, desc: 'Big, comfy family cruiser.' },
+  convertible: { name: 'Sunset Convertible', price: 2800, top: 21, acc: 10, seats: 2, desc: 'Top down, wind in your hair.' },
+  sports: { name: 'Bolt GT Sports Car', price: 4000, top: 25, acc: 12, seats: 2, desc: 'The fastest car in Grokville!' }
 };
 GL.CAR_ORDER = ['golf', 'compact', 'van', 'pickup', 'suv', 'convertible', 'sports'];
 GL.WORK_CARS = { firetruck: { name: 'Fire Truck', top: 19, acc: 9, seats: 3 }, police: { name: 'Police Car', top: 22, acc: 11, seats: 3 } };
