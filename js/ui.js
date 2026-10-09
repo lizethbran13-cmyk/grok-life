@@ -100,9 +100,11 @@ UI.app_career = function () {
 H.guideB = (v) => { const b = W.bld(v); const p = b ? b.out : [-32, 31.5]; G.guide = { x: p[0], z: p[1], label: b ? b.name : 'Stage' }; G.closePanel(); };
 UI.app_house = function () {
   const s = sv(), Hh = GL.HOUSES[s.house]; let h = head('\uD83C\uDFE0 House') + '<div class="big">' + Hh.icon + ' ' + esc(Hh.name) + '</div><p class="sub">' + s.home.length + ' items placed \u00b7 ' + Object.values(s.inv).reduce((a, b) => a + b, 0) + ' in storage</p>';
-  h += '<div class="btncol">' + btn('decor', null, '\uD83D\uDECB\uFE0F DECORATE', 'primary', W.cur.homeKey !== GS.pid) + btn('guideHome', null, '\uD83E\uDDED GUIDE ME HOME', 'blue') + btn('realtorP', null, '\uD83C\uDFE1 HOUSES FOR SALE', '') + '</div>' + (W.cur.homeKey !== GS.pid ? '<p class="sub small">Go inside your home to decorate.</p>' : '');
+  const canD = GL.Decor && GL.Decor.canDecorHere();
+  h += '<div class="btncol">' + btn('decor', null, '\uD83D\uDECB\uFE0F DECORATE', 'primary', !canD) + btn('decorAllowP', null, s.decorAllow ? '\uD83D\uDC65 FRIENDS CAN DECORATE: ON' : '\uD83D\uDD12 FRIENDS CAN DECORATE: OFF', s.decorAllow ? 'blue' : 'alt') + btn('guideHome', null, '\uD83E\uDDED GUIDE ME HOME', 'blue') + btn('realtorP', null, '\uD83C\uDFE1 HOUSES FOR SALE', '') + '</div>' + (!canD ? '<p class="sub small">Go inside your home (or a friend\u2019s home that allows it) to decorate.</p>' : '');
   open('house', h);
 };
+H.decorAllowP = () => { const s = sv(); s.decorAllow = !s.decorAllow; G.persist(); G.syncMe(); UI.app_house(); };
 H.guideHome = () => { const d = G.homeSpot().door; G.guide = { x: d[0], z: d[1], label: 'Home' }; G.closePanel(); };
 H.realtorP = () => UI.realtor();
 UI.app_cars = function () {
@@ -280,24 +282,7 @@ UI.portrait = function (look) {
   PR.r.render(PR.sc, PR.cam); PR.sc.remove(P.g); let url = ''; try { url = PR.cv.toDataURL('image/png'); } catch (e) { /* */ } pcache[key] = url; return url;
 };
 
-/* ---------------- decorate (simple) ---------------- */
-H.decor = () => { G.closePanel(); UI.decorStart(); };
-UI.decorStart = function () { if (W.cur.homeKey !== GS.pid) { G.toast('Go inside your home first!'); return; } GS.decor = { sel: null }; drawDecor(); $('decorBar').classList.remove('hidden'); };
-UI.decorEnd = function () { GS.decor = null; $('decorBar').classList.add('hidden'); G.persist(); G.syncMe(); };
-function nearestFurn() { const s = sv(); let bi = -1, bd = 3; s.home.forEach((f, i) => { const d = Math.hypot(f.x - GS.me.x, f.z - GS.me.z); if (d < bd) { bd = d; bi = i; } }); return bi; }
-function drawDecor() {
-  const s = sv(), ks = Object.keys(s.inv).filter((k) => s.inv[k] > 0), ni = nearestFurn();
-  $('decorBar').innerHTML = '<div class="dtitle">\uD83D\uDECB\uFE0F DECORATE \u2014 walk to a spot, then tap an item to place it</div><div class="dinv">' + (ks.length ? ks.map((k) => '<button class="chip" data-a="dPlace" data-v="' + k + '">' + GL.FURN[k].icon + ' ' + esc(GL.FURN[k].name) + ' \u00d7' + s.inv[k] + '</button>').join('') : '<span class="sub small">Storage empty \u2014 buy furniture at Cozy Home!</span>') + '</div><div class="dbtns">' +
-    btn('dRot', null, '\u21BB TURN', 'small blue', ni < 0) + btn('dMove', null, '\u2725 MOVE HERE', 'small', ni < 0) + btn('dStore', null, '\uD83D\uDCE6 STORE', 'small red', ni < 0) + btn('dDone', null, 'DONE', 'small primary') + '</div>' + (ni >= 0 ? '<div class="sub small">Nearest: ' + esc(GL.FURN[s.home[ni].id].name) + '</div>' : '');
-}
-function spotFor(id, r, skip) { const s = sv(), A = W.cur, fx = Math.sin(GS.me.yaw), fz = Math.cos(GS.me.yaw); for (let k = 0; k < 40; k++) { const dd = 1.3 + (k % 5) * 0.4, a = Math.floor(k / 5) * 0.8 * (k % 2 ? 1 : -1); const x = GS.me.x + (fx * Math.cos(a) - fz * Math.sin(a)) * dd, z = GS.me.z + (fz * Math.cos(a) + fx * Math.sin(a)) * dd; const qx = Math.round(x * 4) / 4, qz = Math.round(z * 4) / 4; if (W.canPlace(A, id, qx, qz, r, s.home, skip, GS.me.x, GS.me.z)) return [qx, qz]; } return null; }
-function refreshHome() { const A = W.cur; A.layoutKey = null; W.homeArea(GS.pid, G.homeData()); drawDecor(); }
-H.dPlace = (k) => { const s = sv(); const p = spotFor(k, 0, -1); if (!p) { G.toast('No room here \u2014 try another spot.', true); return; } s.inv[k]--; s.home.push({ id: k, x: p[0], z: p[1], r: 0 }); Snd.fx('buy'); refreshHome(); };
-H.dRot = () => { const s = sv(), i = nearestFurn(); if (i < 0) return; const f = s.home[i], nr = (f.r + 1) % 4; if (W.canPlace(W.cur, f.id, f.x, f.z, nr, s.home, i)) { f.r = nr; refreshHome(); } else G.toast('Not enough room to turn it.', true); };
-H.dMove = () => { const s = sv(), i = nearestFurn(); if (i < 0) return; const f = s.home[i]; const p = spotFor(f.id, f.r, i); if (!p) { G.toast('No room in front of you.', true); return; } f.x = p[0]; f.z = p[1]; refreshHome(); };
-H.dStore = () => { const s = sv(), i = nearestFurn(); if (i < 0) return; const f = s.home.splice(i, 1)[0]; s.inv[f.id] = (s.inv[f.id] || 0) + 1; refreshHome(); };
-H.dDone = () => UI.decorEnd();
-UI.decorTap = function () { };
+/* decorating lives in js/decor.js */
 
 /* ---------------- tutorial + arcade ---------------- */
 const TUT = ['', '\uD83D\uDC4B Welcome to Grokville! Walk into any store to explore.', '\uD83D\uDCCB Get a job at the Job Board in City Hall.', '\uD83D\uDCBC Go to your workplace and press WORK to do a shift.', '\uD83D\uDECD\uFE0F Spend your paycheck! Buy food, clothes, furniture\u2026'];

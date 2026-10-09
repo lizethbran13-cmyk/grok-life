@@ -119,7 +119,7 @@ function tickDaily(dt) {
    Looks + homes
    ====================================================================== */
 G.curLook = function () { const L = Object.assign({}, save.look); if (GS.work && GL.CAREERS[GS.work.cid]) Object.assign(L, GL.CAREERS[GS.work.cid].uni); return L; };
-G.homeData = function () { return { type: save.house, layout: save.home.map((f) => Object.assign({}, f)), wall: save.wall, floor: save.floor, owner: myName(), pid: GS.pid }; };
+G.homeData = function () { const inv = {}; for (const k in save.inv) if (GL.FURN[k] && save.inv[k] > 0) inv[k] = save.inv[k]; return { type: save.house, layout: save.home.map((f) => Object.assign({}, f)), wall: save.wall, floor: save.floor, owner: myName(), pid: GS.pid, allow: !!save.decorAllow, inv }; };
 function syncMe() { // send my look / home / pets to the session
   const S = S_(); if (!S) return;
   const look = G.curLook(), pets = GL.Pets ? GL.Pets.activeLooks() : [];
@@ -136,7 +136,8 @@ function cleanLook(l) {
 function cleanHome(h) {
   if (!h || !GL.HOUSES[h.type]) return { type: 'apt', layout: [], wall: 0, floor: 'wood' };
   const layout = (Array.isArray(h.layout) ? h.layout : []).slice(0, 80).filter((f) => f && GL.FURN[f.id]).map((f) => ({ id: f.id, x: clamp(+f.x || 0, -14, 14), z: clamp(+f.z || 0, -8, 8), r: (+f.r || 0) & 3 }));
-  return { type: h.type, layout, wall: clamp(+h.wall || 0, 0, GL.WALLS.length - 1), floor: GL.FLOORS.some((f) => f[0] === h.floor) ? h.floor : 'wood', owner: GN.cleanName(h.owner || ''), pid: String(h.pid || '').slice(0, 40) };
+  const inv = {}; if (h.inv && typeof h.inv === 'object') for (const k in h.inv) if (GL.FURN[k]) { const n = clamp(Math.round(+h.inv[k] || 0), 0, 99); if (n) inv[k] = n; }
+  return { type: h.type, layout, wall: clamp(+h.wall || 0, 0, GL.WALLS.length - 1), floor: GL.FLOORS.some((f) => f[0] === h.floor) ? h.floor : 'wood', owner: GN.cleanName(h.owner || ''), pid: String(h.pid || '').slice(0, 40), allow: !!h.allow, inv };
 }
 // which lot / apartment each player's home uses in this town (host decides)
 function assignHomes() {
@@ -470,6 +471,7 @@ addEventListener('keydown', (e) => {
   if (!inGame()) return;
   if (GS.work && GS.work.overlay) { if (GL.Work.key) GL.Work.key(e.code); return; }
   if (GS.ovl) return;
+  if (GS.decor && !GS.panel && GL.UI.decorKey && GL.UI.decorKey(e.code)) { e.preventDefault(); return; }
   if (e.code === 'Escape') { if (GS.panel) closePanel(); else if (!$('phone').classList.contains('hidden')) $('phone').classList.add('hidden'); else if (GS.talk) GL.NPC.close(); else $('scrMenu').classList.toggle('hidden'); return; }
   if (e.repeat || GS.panel || GS.talk) return;
   if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') { e.preventDefault(); pressAct(); }
@@ -514,21 +516,24 @@ G.cam = {
 };
 (function taps() {
   const cv = $('c'), pts = new Map(); let down = null, drag = false, pinch = 0;
+  let grab = false;
   cv.addEventListener('pointerdown', (e) => {
     Snd.init(); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.size === 1) { down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; drag = false; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } }
-    else { down = null; drag = true; const a = [...pts.values()]; pinch = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; }
+    if (pts.size === 1) { down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; drag = false; grab = !!(GS.decor && GL.UI.decorGrab && GL.UI.decorGrab(e.clientX, e.clientY)); try { cv.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } }
+    else { down = null; drag = true; if (grab && GL.UI.decorDrop) GL.UI.decorDrop(); grab = false; const a = [...pts.values()]; pinch = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; }
   });
   cv.addEventListener('pointermove', (e) => {
     const p = pts.get(e.pointerId); if (!p) return; const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
-    if (!inGame() || GS.decor) return;
+    if (!inGame()) return;
     if (pts.size >= 2) { const a = [...pts.values()], d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; G.cam.zoom(pinch / d); pinch = d; return; }
-    if (down && !drag && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 16) drag = true;
+    if (down && !drag && Math.hypot(e.clientX - down.x, e.clientY - down.y) > (grab ? 6 : 16)) drag = true;
+    if (GS.decor) { if (!drag) return; if (grab) GL.UI.decorDrag(e.clientX, e.clientY); else if (GL.UI.decorPan) GL.UI.decorPan(dx, dy); return; }
     if (drag && W.cur) { G.cam.rot(-dx * 0.008); G.cam.tilt(dy * 0.004); }
   });
   const up = (e) => {
     pts.delete(e.pointerId); if (pts.size) return;
     if (down && e.type === 'pointerup' && !drag) { const d = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t; if (d < 16 && dt < 600) tapAt(e.clientX, e.clientY); }
+    if (grab && GL.UI.decorDrop) GL.UI.decorDrop(); grab = false;
     down = null; drag = false;
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('lostpointercapture', (e) => { if (pts.has(e.pointerId)) up(e); });
