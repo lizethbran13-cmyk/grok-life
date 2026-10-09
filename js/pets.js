@@ -34,15 +34,17 @@ function follow(o, tx, tz, dt, cap) {
 let tagT = 0;
 P.tick = function (dt) {
   const s = sv(), m = GS.me, live = {}, A = W.cur;
-  s.pets.forEach((p) => { p.n.h = Math.max(10, p.n.h - dt * 0.03); p.n.f = Math.max(10, p.n.f - dt * 0.025); });
+  s.pets.forEach((p) => { p.n.h = Math.max(10, p.n.h - dt * 0.03); p.n.f = Math.max(10, p.n.f - dt * 0.025); if (p.hp == null) p.hp = 100; if (p.ill && p.ill !== 'checkup') { p.hp = Math.max(20, p.hp - dt * 0.04); p.n.f = Math.min(p.n.f, 60); } });
   const inCar = GL.Cars && (GL.Cars.driving() || m.ride);
   const atHome = A.homeKey === GS.pid;
-  const list = s.pets.filter((p) => !p.missing && (p.out || atHome));
+  const list = s.pets.filter((p) => !p.missing && (p.out || atHome || (p.atVet && A.id === 'vet')));
   list.forEach((p, i) => {
     live[p.id] = 1; const o = ensure(p3, p.id, P.look(p), m.x - 1, m.z - 1);
-    if (!o.tag) { o.tag = W.textSprite(p.name, { size: 30, h: 0.26, bg: 'rgba(40,20,70,.75)', border: '#ffd23f' }); o.tag.position.y = (o.P.hTop || 0.8) + 0.35; o.P.g.add(o.tag); }
+    const tt = (p.ill && GL.PET_ILL[p.ill] ? GL.PET_ILL[p.ill].icon + ' ' : '') + p.name;
+    if (o.tag && o.tagTxt !== tt) { o.P.g.remove(o.tag); o.tag = null; }
+    if (!o.tag) { o.tag = W.textSprite(tt, { size: 30, h: 0.26, bg: p.ill && p.ill !== 'checkup' ? 'rgba(185,28,28,.85)' : 'rgba(40,20,70,.75)', border: '#ffd23f' }); o.tagTxt = tt; o.tag.position.y = (o.P.hTop || 0.8) + 0.35; o.P.g.add(o.tag); }
     o.P.g.visible = !inCar;
-    if (p.out && !atHome || p.out) {
+    if (p.out || (p.atVet && A.id === 'vet')) {
       const fx = Math.sin(m.yaw), fz = Math.cos(m.yaw), side = i % 2 ? 0.9 : -0.9;
       follow(o, m.x - fx * 1.4 + fz * side, m.z - fz * 1.4 - fx * side, dt, Math.max(7, m.sp * 1.4));
     } else { // wander at home

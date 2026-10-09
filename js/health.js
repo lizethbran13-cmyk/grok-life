@@ -23,8 +23,11 @@ const QUIPS = {
   scrape: ['Oof! You scraped your knee.', 'Owie! A scraped knee.'], bonk: ['BONK! You bumped your head.', 'Bonk! Seeing a few cartoon stars\u2026'],
   bruise: ['Whoops! Bruised elbow.', 'Ouch! That\u2019ll be a bruise.'], finger: ['Yowch! A sore finger.', 'Ow ow ow! Sore finger!'],
   sprain: ['OUCH! You sprained your ankle.', 'Yikes! Twisted ankle!'], wrist: ['OUCH! You twisted your wrist.'],
-  broken: ['KER-RUNCH! That\u2019s a broken leg!'], bigbonk: ['KA-BONK!! Super-bonked noggin!']
+  broken: ['KER-RUNCH! That\u2019s a broken leg!'], bigbonk: ['KA-BONK!! Super-bonked noggin!'],
+  sunburn: ['Ouch, you\u2019re as red as a tomato! \uD83C\uDF45', 'Toasty! A cartoon sunburn.'], cold: ['Ah\u2026 ah\u2026 ACHOO! You caught a cold.', 'Sniffle sniffle\u2026 a cold!'],
+  tummy: ['Blorp! Your tummy is doing somersaults.', 'Uh-oh\u2026 that food was NOT fresh. Tummy ache!'], allergy: ['Your face is puffing up like a balloon! \uD83C\uDF88', 'Achoo-achoo! Big itchy puffy allergy!']
 };
+const ILL = (id) => !!(GL.INJ[id] && GL.INJ[id].ill);
 G.hurt = function (id, why, force) {
   const s = sv(), I = GL.INJ[id]; if (!I || !G.inGame()) return false;
   if (!force && cool > 0) return false;
@@ -37,7 +40,7 @@ G.hurt = function (id, why, force) {
   s.hp = Math.min(s.hp, HL.cap());
   const q = QUIPS[id]; const msg = (why ? why + ' ' : '') + q[Math.floor(Math.random() * q.length)];
   if (I.lv === 1) { G.toast('\uD83E\uDD15 ' + msg + ' (+ bandages at the clinic pharmacy help)'); lv1T = 0; }
-  else if (I.lv === 2 && cur < 3) { G.toast('\uD83E\uDD15 ' + msg + ' You\u2019re limping \u2014 book a doctor appointment on your phone (\uD83E\uDE7A Health).', true); }
+  else if (I.lv === 2 && cur < 3) { G.toast(I.icon + ' ' + msg + (I.ill ? ' You feel too yucky to work' : ' You\u2019re limping') + ' \u2014 book a doctor appointment on your phone (\uD83E\uDE7A Health).', true); }
   else if (I.lv === 3) { goDown(msg); }
   G.persist(); return true;
 };
@@ -51,7 +54,7 @@ function goDown(msg) {
 }
 HL.downPanel = function (msg) {
   if (lv() < 3 || amb) return;
-  open('down', head('\uD83D\uDE91 Big ouch!') + '<div class="big">' + (GL.INJ[inj().id].icon) + '</div><p class="sub">' + esc(msg || GL.INJ[inj().id].name) + ' You can\u2019t walk on that! Call an ambulance to take you to Maple Hospital.</p>' + btn('callAmb', null, '\uD83D\uDCF1 CALL AMBULANCE', 'red') + '<p class="sub small">(The ride is free. The hospital sends a bill later\u2026)</p>');
+  open('down', head('\uD83D\uDE91 Big ouch!') + '<div class="big">' + (GL.INJ[inj().id].icon) + '</div><p class="sub">' + esc(msg || GL.INJ[inj().id].name) + (ILL(inj().id) ? ' You need a doctor fast! Call an ambulance to take you to Maple Hospital.' : ' You can\u2019t walk on that! Call an ambulance to take you to Maple Hospital.') + '</p>' + btn('callAmb', null, '\uD83D\uDCF1 CALL AMBULANCE', 'red') + '<p class="sub small">(The ride is free. The hospital sends a bill later\u2026)</p>');
 };
 // crashes (from cars.js)
 G.onCrash = function (v, work) {
@@ -138,7 +141,7 @@ UI.app_health = function () {
   if (!I) h += '<p class="sub">No injuries! ' + (hp < 100 ? 'Rest, sleep or grab a bandage to top up.' : 'Feeling great \uD83D\uDCAA') + '</p>';
   else if (I.lv === 1) h += '<p class="sub">' + I.icon + ' <b>' + esc(I.name) + '</b> \u2014 a minor ouchie. It heals with rest or sleep, or use a bandage / ice pack from the Maple Clinic pharmacy.</p>';
   else if (I.lv === 2) {
-    h += '<p class="sub">' + I.icon + ' <b>' + esc(I.name) + '</b> \u2014 a serious injury. You\u2019re limping and can\u2019t work until a doctor fixes it.</p>';
+    h += '<p class="sub">' + I.icon + ' <b>' + esc(I.name) + '</b> \u2014 ' + (I.ill ? 'you feel super yucky and can\u2019t work until a doctor helps.' : 'a serious injury. You\u2019re limping and can\u2019t work until a doctor fixes it.') + '</p>';
     if (s.appt) { h += '<div class="appt">\uD83D\uDCC5 Appointment: <b>' + dayWord(s.appt.day) + ' ' + G.timeStr(s.appt.min) + '</b> with Dr. Priya at Maple Clinic.<br><small>Check in at the front desk up to 30 min early (or up to 1 hour late).</small></div>' + '<div class="btnrow">' + btn('guideClinic', null, '\uD83E\uDDED GUIDE ME', 'blue') + btn('cancelAppt', null, 'CANCEL', 'alt small') + '</div>'; }
     else { h += '<h3>\uD83D\uDCC5 Book a doctor appointment</h3><p class="sub small">Maple Clinic \u00b7 Dr. Priya \u00b7 visit fee ' + money(GL.CLINIC_FEE) + '</p><div class="btncol">' + slots().map((q) => btn('book', q.day + '|' + q.min, dayWord(q.day) + ' \u00b7 ' + G.timeStr(q.min), 'green small')).join('') + '</div>'; }
   } else {
@@ -180,9 +183,10 @@ G.hooks.kinds.checkin = function () {
 H.openHealth = () => { G.closePanel(); UI.app_health(); };
 H.waitAppt = () => { const s = sv(); if (!s.appt) return; G.closePanel(); document.getElementById('fade').classList.add('on'); setTimeout(() => { G.skipTo(s.appt.min); document.getElementById('fade').classList.remove('on'); G.toast('\u23F0 \u201C' + G.myName() + '? The doctor will see you now!\u201D'); HL.visit(); }, 700); };
 const DOC = [['\uD83D\uDDE3\uFE0F', 'Dr. Priya: \u201CSay AHHH!\u201D', 'AHHHH!'], ['\uD83E\uDE7B', 'Dr. Priya: \u201CLet\u2019s take an X-ray. Hold still\u2026\u201D', 'HOLD STILL \uD83D\uDDBC\uFE0F'], ['\uD83E\uDE79', 'Dr. Priya: \u201CJust needs a wrap and some rest!\u201D', 'WRAP IT UP']];
+const DOC_ILL = { tummy: ['\uD83E\uDD64', 'Dr. Priya: \u201CSome fizzy tummy medicine and lots of water. Bland crackers for a day!\u201D', 'FIZZY! \uD83E\uDEE7'], sunburn: ['\uD83E\uDDF4', 'Dr. Priya: \u201CCool aloe gel! And sunscreen next time, okay?\u201D', 'AHH, COOL'], cold: ['\uD83C\uDF75', 'Dr. Priya: \u201CHoney tea, tissues and a cozy nap!\u201D', 'ACHOO! THANKS'], allergy: ['\uD83D\uDC8A', 'Dr. Priya: \u201CAn allergy tablet \u2014 the puffiness is going down already!\u201D', 'PHEW'] };
 HL.visit = function (step) {
   step = step || 0; const s = sv();
-  if (step < DOC.length) { const d = DOC[step]; open('docVisit', head('\uD83E\uDE7A Dr. Priya') + '<div class="big">' + d[0] + '</div><p class="sub">' + d[1] + '</p>' + btn('docStep', step + 1, d[2], 'primary')); Snd.fx(step === 1 ? 'beep' : 'click'); return; }
+  if (step < DOC.length) { const d = step === 2 && s.inj && DOC_ILL[s.inj.id] ? DOC_ILL[s.inj.id] : DOC[step]; open('docVisit', head('\uD83E\uDE7A Dr. Priya') + '<div class="big">' + d[0] + '</div><p class="sub">' + d[1] + '</p>' + btn('docStep', step + 1, d[2], 'primary')); Snd.fx(step === 1 ? 'beep' : 'click'); return; }
   const I = s.inj ? GL.INJ[s.inj.id] : null; s.inj = null; s.appt = null; s.hp = Math.max(s.hp, 90); s.stats.healed = (s.stats.healed || 0) + 1;
   let paid = '';
   if (s.money >= GL.CLINIC_FEE) { G.spend(GL.CLINIC_FEE); paid = 'Visit fee: ' + money(GL.CLINIC_FEE) + ' paid.'; } else { addBill('Maple Clinic visit', GL.CLINIC_FEE); paid = 'Short on cash? We sent you a bill for ' + money(GL.CLINIC_FEE) + '.'; }
@@ -194,13 +198,15 @@ H.docStep = (v) => HL.visit(+v);
 
 /* ---------------- ambulance ---------------- */
 const HOSP = () => W.bld('hospital').out;
-HL.callAmbulance = function () {
-  if (amb || lv() < 3) return;
+HL.callAmbulance = function (force) {
+  if (amb || lv() < (force ? 2 : 3) || (G.jailed && G.jailed())) return false;
+  if (lv() === 2) { const C = GL.Cars; if (C) { const o = C.cur && C.cur(); if (o && C.workObj() === o) C.endWork(o.x, o.z); else if (o) C.act({ kind: 'exit' }); } if (GS.work && GL.Work) GL.Work.abort(true); if (GS.me.act) G.endAct(true); }
   Snd.fx('ding'); G.toast('\uD83D\uDCDE 9-1-1: \u201CHelp is on the way! Stay right there!\u201D');
   const A = W.cur; let px = GS.me.x, pz = GS.me.z, inside = false;
   if (!A.outdoor) { inside = true; const o = A.homeKey ? G.homeSpot(A.homeKey).door : A.exitTo || HOSP(); px = o[0]; pz = o[1]; }
   const hs = HOSP(), car = GL.Cars.makeCar('ambulance', null, hs[0], hs[1] + 2, 0);
   amb = { phase: 'coming', car, path: W.navPath(hs[0], hs[1] + 2, px, pz), pi: 0, t: 0, px, pz, inside: false, wasInside: inside, sirenT: 0 };
+  return true;
 };
 function driveTo(o, tx, tz, sp, dt) { const dx = tx - o.x, dz = tz - o.z, d = Math.hypot(dx, dz); if (d < 0.6) return true; const want = Math.atan2(dx, dz); o.yaw += G.ang(want - o.yaw) * Math.min(1, dt * 5); const st = Math.min(d, sp * dt); o.x += dx / d * st; o.z += dz / d * st; o.v = sp; return false; }
 function ambTick(dt) {
@@ -243,9 +249,10 @@ function toHospital() {
 G.camHook = () => { if (!amb || amb.phase !== 'ride') return null; W.camZoom = 1.35; W.camAhead = [0, 0]; return [amb.car.x, amb.car.z]; };
 G.carOverride = () => (amb && amb.phase === 'ride' ? ['ambulance', '#ffffff', +amb.car.x.toFixed(2), +amb.car.z.toFixed(2), +amb.car.yaw.toFixed(2), 1, 0, ''] : null);
 const ER = [['\uD83E\uDE7B', 'Dr. Priya: \u201CLet\u2019s get some X-rays\u2026 yep, that\u2019s definitely the problem!\u201D', 'OKAY'], ['\uD83E\uDDB4', 'Dr. Priya: \u201CA big cartoon cast, coming right up! Want stickers on it?\u201D', 'YES PLEASE \u2B50'], ['\uD83D\uDECC', 'You rest in the hospital bed for a while. The jello is surprisingly good.', 'YUM \uD83C\uDF6E']];
+const ER_ILL = { allergy: [['\uD83E\uDE7A', 'Dr. Priya: \u201CLet\u2019s take a look\u2026 yep, a big allergy! Nothing to worry about now.\u201D', 'OKAY'], ['\uD83D\uDC89', 'Dr. Priya: \u201CA quick allergy shot \u2014 tiny pinch! \u2014 and cool cream. Watch the puffiness shrink!\u201D', 'SO BRAVE \u2B50']], tummy: [['\uD83E\uDE7A', 'Dr. Priya: \u201CA grumbly tummy! Let\u2019s get you some fluids.\u201D', 'OKAY'], ['\uD83E\uDD64', 'Dr. Priya: \u201CFizzy tummy medicine coming right up!\u201D', 'FIZZY!']] };
 HL.er = function (step) {
   const s = sv();
-  if (step < ER.length) { const d = ER[step]; open('er', head('\uD83C\uDFE5 Maple Hospital ER') + '<div class="big">' + d[0] + '</div><p class="sub">' + d[1] + '</p>' + btn('erStep', step + 1, d[2], 'primary')); return; }
+  if (step < ER.length) { const d = s.inj && ER_ILL[s.inj.id] && step < 2 ? ER_ILL[s.inj.id][step] : ER[step]; open('er', head('\uD83C\uDFE5 Maple Hospital ER') + '<div class="big">' + d[0] + '</div><p class="sub">' + d[1] + '</p>' + btn('erStep', step + 1, d[2], 'primary')); return; }
   s.inj = null; s.appt = null; s.hp = 75; s.stats.healed = (s.stats.healed || 0) + 1;
   if (GS.role !== 'client') G.skipTo((G.clock() + 120) % 1440);
   const id = addBill('Maple Hospital ER visit', GL.HOSPITAL_BILL);

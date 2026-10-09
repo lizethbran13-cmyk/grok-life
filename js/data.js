@@ -205,8 +205,20 @@ GL.stageScale = () => 1;
 GL.INJ = {
   scrape: { lv: 1, name: 'Scraped knee', icon: '\uD83E\uDE79' }, bonk: { lv: 1, name: 'Bonked head', icon: '\uD83E\uDD15' }, bruise: { lv: 1, name: 'Bruised elbow', icon: '\uD83E\uDE79' }, finger: { lv: 1, name: 'Sore finger', icon: '\uD83E\uDE79' },
   sprain: { lv: 2, name: 'Sprained ankle', icon: '\uD83E\uDDB5' }, wrist: { lv: 2, name: 'Twisted wrist', icon: '\uD83E\uDDBE' },
-  broken: { lv: 3, name: 'Broken leg', icon: '\uD83E\uDDB4' }, bigbonk: { lv: 3, name: 'Super-bonked noggin', icon: '\uD83D\uDCAB' }
+  broken: { lv: 3, name: 'Broken leg', icon: '\uD83E\uDDB4' }, bigbonk: { lv: 3, name: 'Super-bonked noggin', icon: '\uD83D\uDCAB' },
+  // illnesses + mishaps from the Scenarios app (cartoony, no gore)
+  sunburn: { lv: 1, name: 'Sunburn', icon: '\uD83E\uDD75', ill: 1 }, cold: { lv: 1, name: 'Sniffly cold', icon: '\uD83E\uDD27', ill: 1 },
+  tummy: { lv: 2, name: 'Food poisoning', icon: '\uD83E\uDD22', ill: 1 }, allergy: { lv: 3, name: 'Puffy allergic reaction', icon: '\uD83E\uDD2F', ill: 1 }
 };
+/* ---------------- pets: health + the Grokville Vet Clinic ---------------- */
+GL.PET_ILL = {
+  sick: { name: 'Sick (tummy bug + sniffles)', icon: '\uD83E\uDD12', fee: 60, hp: 55, fix: ['\uD83E\uDD44', 'Dr. Kiki: \u201CA spoonful of yummy banana medicine. Down the hatch!\u201D', 'GULP \uD83C\uDF4C'] },
+  hurt: { name: 'Hurt paw', icon: '\uD83E\uDE79', fee: 90, hp: 45, fix: ['\uD83E\uDE7B', 'Dr. Kiki: \u201CA tiny X-ray\u2026 just a sprain! A teeny cast with sparkly stickers.\u201D', 'STICKERS! \u2B50'] },
+  ate: { name: 'Ate something bad (a sock!)', icon: '\uD83E\uDDE6', fee: 120, hp: 40, fix: ['\uD83E\uDE7B', 'Dr. Kiki: \u201CThe X-ray shows\u2026 a SOCK! A special fizzy drink helps it come back out. Ewww, but all better!\u201D', 'EWW, OKAY \uD83E\uDDE6'] },
+  checkup: { name: 'Due for a check-up', icon: '\uD83D\uDCCB', fee: 30, hp: 100, fix: ['\uD83D\uDC89', 'Dr. Kiki: \u201CA quick vaccine boop and a nail trim. Brave pet!\u201D', 'BOOP \uD83D\uDC3E'] }
+};
+GL.PET_INS = { price: 80, days: 7, cover: 0.8 }; // Paws Protect pet insurance (way nicer than Gary)
+GL.PET_TAXI = 10;
 GL.CLINIC_FEE = 40; GL.HOSPITAL_BILL = 420;
 
 /* ---------------- crime (optional + cartoony) ---------------- */
@@ -257,6 +269,7 @@ GL.GOALS = [
   { id: 'stars3', icon: '\uD83C\uDFC6', name: 'Perfect Shift', desc: 'Get 3 stars on a work shift', p: (s) => [s.stats.perfect, 1], r: 150 },
   { id: 'doc', icon: '\uD83E\uDE7A', name: 'Doctor\u2019s Orders', desc: 'Get patched up at the clinic or hospital', p: (s) => [(s.stats.healed || 0), 1], r: 75 },
   { id: 'strays5', icon: '\uD83D\uDC36', name: 'Rescue Ranger', desc: 'Bring 5 strays to the shelter', p: (s) => [(s.stats.strays || 0), 5], r: 250 },
+  { id: 'vet1', icon: '\uD83E\uDDB4', name: 'Pet Doctor', desc: 'Take a pet to the Grokville Vet Clinic', p: (s) => [(s.stats.vet || 0), 1], r: 75 },
   { id: 'grump', icon: '\uD83D\uDE24', name: 'Melted His Heart', desc: 'Make Old Man Grumbleton smile', p: (s) => [s.npc && s.npc.grumble && s.npc.grumble.fr >= 15 ? 1 : 0, 1], r: 400 }
 ];
 })();

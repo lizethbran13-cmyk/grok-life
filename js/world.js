@@ -199,7 +199,8 @@ const BLD = [
   { id: 'pawn', name: 'Sid\u2019s Pawn & Stuff', icon: '\uD83C\uDFA9', x0: -60, x1: -50, z0: 58, z1: 69, door: 'n', col: '#e7e5e4', roof: '#44403c', sign: 'SID\u2019S PAWN', open: [0, 24] },
   { id: 'tech', name: 'Byte Buy Tech Store', icon: '\uD83D\uDCBB', x0: -62, x1: -55, z0: -26, z1: -14, door: 's', col: '#e0e7ff', roof: '#4338ca', sign: 'BYTE BUY', open: [9, 21] },
   { id: 'hanks', name: 'Honest Hank\u2019s Auto Care', icon: '\uD83D\uDEE0\uFE0F', x0: 55, x1: 62, z0: -24, z1: -12, door: 'n', col: '#dbeafe', roof: '#1d4ed8', sign: 'HONEST HANK\u2019S', open: [0, 24] },
-  { id: 'steves', name: 'Sketchy Steve\u2019s Fix-It-Quik', icon: '\uD83E\uDE9B', x0: -62, x1: -55, z0: 12, z1: 24, door: 's', col: '#fde68a', roof: '#78350f', sign: 'STEVE\u2019S FIX-IT', open: [0, 24] }
+  { id: 'steves', name: 'Sketchy Steve\u2019s Fix-It-Quik', icon: '\uD83E\uDE9B', x0: -62, x1: -55, z0: 12, z1: 24, door: 's', col: '#fde68a', roof: '#78350f', sign: 'STEVE\u2019S FIX-IT', open: [0, 24] },
+  { id: 'vet', name: 'Grokville Vet Clinic', icon: '\uD83E\uDDB4', x0: 55, x1: 62, z0: 8, z1: 20, door: 'n', col: '#e0f2fe', roof: '#0d9488', sign: 'VET CLINIC', open: [0, 24] }
 ];
 W.BLD = BLD; W.bld = (id) => BLD.find((b) => b.id === id);
 W.isOpen = function (id, min) { const b = W.bld(id); if (!b) return true; const h = (min / 60) % 24; return b.open[0] === 0 && b.open[1] === 24 ? true : h >= b.open[0] && h < b.open[1]; };
@@ -359,6 +360,7 @@ function decorateBuildings(A) {
   // Pawn: neon hat + shady awning
   { const b = W.bld('hanks'); const t = signPlane('\u2B50 5 STARS', 2.2, 0.6, '#1d4ed8'); t.position.set(b.cx, 4.2, b.z0 - 0.12); t.rotation.y = Math.PI; g.add(t); ground(A, 6, 4.5, '#6b7280', b.cx, b.z0 - 3.4, 0.095); W.shopPark = W.shopPark || {}; W.shopPark.hanks = [b.cx - 1.5, b.z0 - 3.6, -Math.PI / 2]; }
   { const b = W.bld('steves'); const t = signPlane('MOSTLY FIXED!', 2.6, 0.6, '#b45309'); t.position.set(b.cx, 4.2, b.z1 + 0.12); g.add(t); ground(A, 6, 4.5, '#78716c', b.cx, b.z1 + 3.4, 0.095); for (let i = 0; i < 3; i++) cyl(0.42, 0.28, '#1f2937', g, b.x0 + 0.8, 0.15 + i * 0.28, b.z1 + 1.6); obsC(A, b.x0 + 0.8, b.z1 + 1.6, 0.45); W.shopPark = W.shopPark || {}; W.shopPark.steves = [b.cx + 1.5, b.z1 + 3.6, Math.PI / 2]; }
+  { const b = W.bld('vet'); const pw = signPlane('\uD83D\uDC3E', 1.2, 1.2, '#0d9488'); pw.position.set(b.x0 + 1.2, 3.6, b.z0 - 0.12); pw.rotation.y = Math.PI; g.add(pw); const t = signPlane('24/7 PET ER', 2.2, 0.55, '#dc2626'); t.position.set(b.cx, 4.25, b.z0 - 0.12); t.rotation.y = Math.PI; g.add(t); ground(A, 6, 3.5, '#9ca3af', b.cx, b.z0 - 3.2, 0.095); W.vetPark = [b.cx + 1.5, b.z0 - 3.2, -Math.PI / 2]; }
   { const b = W.bld('pawn'); const ht = signPlane('\uD83C\uDFA9', 1.2, 1.2, '#44403c'); ht.position.set(b.x0 + 1.4, 3.6, b.z0 - 0.1); ht.rotation.y = Math.PI; g.add(ht); }
   // hiding spots: big leafy hedges you can duck into when you\u2019re in trouble (also fun for hide & seek)
   W.hides = [];
@@ -690,6 +692,22 @@ function buildInteriors() {
   { const tb = signPlane('NO REFUNDS \u00b7 NO PROBLEMS', 3.4, 0.7, '#b45309'); tb.position.set(-3, 2.6, -4.88); A.g.add(tb); }
   hot(A, { id: 'mech', kind: 'mech', shop: 'steve', x: -3, z: -1.4, reach: 1.9, name: 'Steve (not-so-helpful mechanic)', label: 'REPAIR' });
   label(A, '\uD83E\uDE9B SKETCHY STEVE\u2019S FIX-IT-QUIK', 0, 3.0, -4.6, 'rgba(120,53,15,.92)');
+  // Grokville Vet Clinic (pets get sick + hurt too!)
+  A = room('vet', 16, 11, tileTex('#f0fdfa', '#ccfbf1', 8, 5.5), '#e0f2fe'); A.label = 'Grokville Vet Clinic';
+  counter(A, -4, -2.6, 3.6, 1, '#0d9488', '#f0fdfa');
+  { const rc = MD.avatar({ skin: GL.SKINS[3], hair: 'curly', hc: '#3b2414', top: 'tee', tc: '#2dd4bf', bc: '#2dd4bf' }); rc.g.position.set(-4, 0, -3.6); A.g.add(rc.g); label(A, '\uD83D\uDC4B Receptionist Ray', -4, 2.45, -3.6, 'rgba(13,148,136,.9)'); }
+  { const et = grp(A.g, 4.2, 0, -2.8); box(2.4, 0.95, 1.2, '#e0f2fe', et, 0, 0.47, 0); box(2.5, 0.08, 1.3, '#38bdf8', et, 0, 0.98, 0); cyl(0.04, 2.3, '#94a3b8', et, 1.4, 1.15, -0.5); const lmp = cone(0.28, 0.25, '#facc15', et, 1.1, 2.3, -0.5); lmp.rotation.x = Math.PI; obsB(A, 2.9, 5.6, -3.5, -2.1); A.examSpot = [4.2, -2.75]; }
+  { const vt = MD.avatar({ skin: GL.SKINS[6], hair: 'bun', hc: '#1b1210', top: 'coat', tc: '#f8fafc', bc: '#0d9488', gl: 'round' }); vt.g.position.set(4.2, 0, -4.3); A.g.add(vt.g); label(A, '\uD83E\uDE7A Dr. Kiki (Vet)', 4.2, 2.45, -4.3, 'rgba(13,148,136,.9)'); }
+  { const xr = grp(A.g, 7.8, 0, -1.2); box(0.08, 1.2, 1.6, '#1e293b', xr, 0, 1.9, 0); box(0.04, 1.0, 1.4, M('#bae6fd', { emissive: '#0c4a6e' }), xr, -0.05, 1.9, 0); const bn = signPlane('\uD83E\uDDB4', 0.8, 0.8, '#0c4a6e'); bn.position.set(-0.08, 1.9, 0); bn.rotation.y = -Math.PI / 2; xr.add(bn); }
+  shelfUnit(A, 0.3, -5.0, 3, 0, ['#f472b6', '#22c55e', '#facc15', '#38bdf8']);
+  [-2, -1, 0, 1].forEach((x, i) => { furnAt(A, 'chair', x * 1.1 - 4.2, 2.6, Math.PI, 1, false); seatHot(A, 'vwait' + i, x * 1.1 - 4.2, 2.6, Math.PI, 'Waiting Room Chair'); }); obsB(A, -6.8, -2.8, 2.25, 2.95);
+  furnAt(A, 'petbed', 5.6, 2.8, 0, 1, false); furnAt(A, 'petbed', 3.6, 2.8, 0, 1, false); furnAt(A, 'plant', -7.2, -4.8, 0); furnAt(A, 'aquarium', -7.3, 0.2, Math.PI / 2);
+  { const ps = signPlane('BRUSH YOUR PET\u2019S TEETH! \uD83E\uDDB7', 3.2, 0.6, '#0d9488'); ps.position.set(-4, 2.4, -5.48); A.g.add(ps); }
+  counter(A, 6.9, 1.0, 1, 2, '#f59e0b'); { const ins = signPlane('PAWS PROTECT', 2, 0.45, '#f59e0b'); ins.position.set(7.84, 2.2, 1.0); ins.rotation.y = -Math.PI / 2; A.g.add(ins); }
+  hot(A, { id: 'vetdesk', kind: 'vetdesk', x: -4, z: -1.4, reach: 1.9, name: 'Vet Front Desk', label: 'CHECK IN' });
+  hot(A, { id: 'vetexam', kind: 'vetexam', x: 4.2, z: -1.4, reach: 1.9, name: 'Exam Table (Dr. Kiki)', label: 'TREAT PET' });
+  hot(A, { id: 'petins', kind: 'petins', x: 5.6, z: 1.0, reach: 1.6, name: 'Paws Protect Pet Insurance', label: 'INSURE' });
+  label(A, '\uD83E\uDDB4 GROKVILLE VET CLINIC', 0, 3.0, -5.1, 'rgba(13,148,136,.92)');
   // bank vault + hospital billing / ER (extras)
   { const B = W.areas.bank; A = B; const vd = dyn(grp(B.g, 4.5, 1.6, -4.7)); B.loot = { vault: vd }; for (let i = 0; i < 3; i++) box(0.5, 0.2, 0.25, M('#facc15', { emissive: '#a16207' }), vd, -0.6 + i * 0.6, -1.3, 0.2);
     hot(B, { id: 'h_vault', kind: 'heist', heist: 'vault', x: 5.6, z: -3.7, reach: 1.7, name: 'Bank Vault', label: 'LOOK' }); }
@@ -706,7 +724,7 @@ function buildInteriors() {
   Object.keys(NH).forEach((id) => { const h = NH[id]; A = room('nh_' + id, 14, 10, W.floorTex(h.floor, 14, 10), h.wall); A.label = NPC_LOTS[Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id)].name + '\u2019s House'; A.npcHome = id; h.items.forEach((q) => furnAt(A, q[0], q[1], q[2], q[3], 1, q[0] !== 'rug')); });
   { const A2 = W.areas.nh_grumble; const ks = signPlane('NO VISITORS (mostly)', 2.6, 0.5, '#dc2626'); ks.position.set(-1, 2.4, -4.83); A2.g.add(ks); }
   { const A2 = W.areas.nh_gladys; const bn = grp(A2.g, 5.5, 0, 2); box(0.12, 0.12, 0.3, '#111827', bn, -0.1, 1.5, 0); box(0.12, 0.12, 0.3, '#111827', bn, 0.1, 1.5, 0); cyl(0.04, 1.4, '#78350f', bn, 0, 0.7, 0); }
-  ['grocery', 'boutique', 'cafe', 'bank', 'cityhall', 'furniture', 'petstore', 'hospital', 'school', 'garage', 'dealer', 'fire', 'police', 'museum', 'jewelry', 'shelter', 'clinic', 'pawn', 'tech', 'hanks', 'steves', 'nh_gladys', 'nh_rosa', 'nh_grumble', 'nh_joe'].forEach((id) => { const a = W.areas[id]; const b = W.bld(id); a.exitTo = b ? b.out : null; if (id.indexOf('nh_') === 0) { const li = +Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id.slice(3)); a.exitTo = [GL.LOTS[li] - 1.5, 58.4]; } bake(a.g); });
+  ['grocery', 'boutique', 'cafe', 'bank', 'cityhall', 'furniture', 'petstore', 'hospital', 'school', 'garage', 'dealer', 'fire', 'police', 'museum', 'jewelry', 'shelter', 'clinic', 'pawn', 'tech', 'hanks', 'steves', 'vet', 'nh_gladys', 'nh_rosa', 'nh_grumble', 'nh_joe'].forEach((id) => { const a = W.areas[id]; const b = W.bld(id); a.exitTo = b ? b.out : null; if (id.indexOf('nh_') === 0) { const li = +Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id.slice(3)); a.exitTo = [GL.LOTS[li] - 1.5, 58.4]; } bake(a.g); });
 }
 
 /* ---------------- player homes ---------------- */

@@ -40,7 +40,7 @@ const DIS = {
 WX.DIS = DIS;
 const FREQ = { off: 0, rare: 0.03, normal: 0.07, chaos: 0.3 };
 const GAP = { off: 9999, rare: 360, normal: 240, chaos: 60 };
-const ESSENTIAL = { hospital: 1, clinic: 1, police: 1, fire: 1, shelter: 1 };
+const ESSENTIAL = { hospital: 1, clinic: 1, police: 1, fire: 1, shelter: 1, vet: 1 };
 const EMERG_JOBS = { doctor: 1, fire: 1, police: 1, mechanic: 1, vet: 1, animalcontrol: 1 };
 const FLOOD = { x0: -62, x1: 62, z0: 41, z1: 55 }; // Lower Maple Street (the low road in the south)
 const abs = () => G.day() * 1440 + G.clock();
