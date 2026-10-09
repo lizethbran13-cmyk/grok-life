@@ -76,7 +76,7 @@ GL.CARS = {
   sports: { name: 'Bolt GT Sports Car', price: 4000, top: 25, acc: 12, seats: 2, desc: 'The fastest car in Grokville!' }
 };
 GL.CAR_ORDER = ['golf', 'compact', 'van', 'pickup', 'suv', 'convertible', 'sports'];
-GL.WORK_CARS = { firetruck: { name: 'Fire Truck', top: 19, acc: 9, seats: 3 }, police: { name: 'Police Car', top: 22, acc: 11, seats: 3 }, acvan: { name: 'Rescue Van', top: 18, acc: 10, seats: 3 }, ambulance: { name: 'Ambulance', top: 18, acc: 9, seats: 3 } };
+GL.WORK_CARS = { firetruck: { name: 'Fire Truck', top: 19, acc: 9, seats: 3 }, police: { name: 'Police Car', top: 22, acc: 11, seats: 3 }, acvan: { name: 'Rescue Van', top: 18, acc: 10, seats: 3 }, ambulance: { name: 'Ambulance', top: 18, acc: 9, seats: 3 }, tow: { name: 'Tow Truck', top: 16, acc: 8, seats: 3 } };
 GL.CAR_COLS = ['#ef4444', '#fb923c', '#facc15', '#4ade80', '#14b8a6', '#38bdf8', '#3b82f6', '#8b5cf6', '#ff4fd8', '#f8fafc', '#1f2937', '#94a3b8'];
 
 /* ---------------- houses ---------------- */
@@ -152,6 +152,11 @@ GL.ITEMS = {
   bandage: { name: 'Cartoon Bandage', icon: '\uD83E\uDE79', price: 8, where: 'pharm', cat: 'med', hp: 15, desc: 'For bumps and scrapes. +15 health.' },
   icepack: { name: 'Ice Pack', icon: '\uD83E\uDDCA', price: 12, where: 'pharm', cat: 'med', hp: 22, desc: 'Cools a bonk. +22 health.' },
   ointment: { name: 'Owie Ointment', icon: '\uD83E\uDDF4', price: 18, where: 'pharm', cat: 'med', hp: 35, desc: 'Super soothing. +35 health.' },
+  smartphone: { name: 'Smartphone X', icon: '\uD83D\uDCF1', price: 120, where: 'tech', cat: 'tech', f: 10, s: 6, desc: 'Watch funny cat videos. +fun' },
+  laptop: { name: 'Laptop', icon: '\uD83D\uDCBB', price: 280, where: 'tech', cat: 'tech', f: 14, desc: 'Play browser games. +fun' },
+  console: { name: 'Game Console', icon: '\uD83C\uDFAE', price: 240, where: 'tech', cat: 'tech', f: 22, e: -4, desc: 'Big fun! (a little tiring)' },
+  tv: { name: 'Mega TV', icon: '\uD83D\uDCFA', price: 360, where: 'tech', cat: 'tech', f: 18, e: 6, desc: 'Cozy cartoon marathon. +fun +energy' },
+  headphones: { name: 'Headphones', icon: '\uD83C\uDFA7', price: 60, where: 'tech', cat: 'tech', f: 8, desc: 'Jam out to music. +fun' },
   vitamins: { name: 'Gummy Vitamins', icon: '\uD83C\uDF6C', price: 10, where: 'pharm', cat: 'med', hp: 10, e: 10, desc: '+10 health, +10 energy.' }
 };
 GL.itemsAt = (w) => Object.keys(GL.ITEMS).filter((k) => GL.ITEMS[k].where === w);
@@ -206,13 +211,14 @@ GL.CLINIC_FEE = 40; GL.HOSPITAL_BILL = 420;
 GL.LOOT = {
   gem: { name: 'Big Blue Gem', icon: '\uD83D\uDC8E', price: 380 }, crownj: { name: 'Jeweled Crown', icon: '\uD83D\uDC51', price: 300 }, llama: { name: 'Golden Llama Statue', icon: '\uD83E\uDD99', price: 260 },
   dinoegg: { name: 'Dino Egg Fossil', icon: '\uD83E\uDD5A', price: 220 }, ring: { name: 'Sparkly Ring', icon: '\uD83D\uDC8D', price: 90 }, necklace: { name: 'Pearl Necklace', icon: '\uD83D\uDCFF', price: 120 },
-  watch: { name: 'Fancy Watch', icon: '\u231A', price: 80 }, goldbar: { name: 'Gold Bar', icon: '\uD83E\uDE99', price: 200 }, cashbag: { name: 'Money Bag', icon: '\uD83D\uDCB0', price: 150 }
+  watch: { name: 'Fancy Watch', icon: '\u231A', price: 80 }, hphone: { name: 'Shiny Phone', icon: '\uD83D\uDCF1', price: 110 }, hlaptop: { name: 'Laptop', icon: '\uD83D\uDCBB', price: 160 }, hconsole: { name: 'Game Console', icon: '\uD83C\uDFAE', price: 140 }, goldbar: { name: 'Gold Bar', icon: '\uD83E\uDE99', price: 200 }, cashbag: { name: 'Money Bag', icon: '\uD83D\uDCB0', price: 150 }
 };
 /* area: building it's in; hot: id of the display; diff 1..3; stars = wanted level after */
 GL.HEISTS = {
   gems: { name: 'Gem Gallery', area: 'museum', icon: '\uD83D\uDC8E', diff: 3, stars: 3, loot: { gem: 1, crownj: 1 } },
   relics: { name: 'Ancient Relics', area: 'museum', icon: '\uD83E\uDD99', diff: 2, stars: 2, loot: { llama: 1, dinoegg: 1 } },
   jewels: { name: 'Jewelry Cases', area: 'jewelry', icon: '\uD83D\uDC8D', diff: 1, stars: 1, loot: { ring: 2, necklace: 1, watch: 1 } },
+  tech: { name: 'Gadget Wall', area: 'tech', icon: '\uD83C\uDFAE', diff: 2, stars: 2, loot: { hphone: 1, hlaptop: 1, hconsole: 1 } },
   vault: { name: 'Bank Vault', area: 'bank', icon: '\uD83E\uDE99', diff: 3, stars: 3, loot: { goldbar: 1, cashbag: 2 } }
 };
 GL.JAIL_SECS = 12; GL.FINE = 80;

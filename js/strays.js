@@ -17,6 +17,7 @@ const park = () => W.shelterPark || [shelterDoor()[0] + 4, shelterDoor()[1] + 3,
 const SPOTS = [[-24, 6], [-30, 30], [-14, 36], [-36, 20], [10, 30], [24, 10], [-10, -24], [30, -30], [-30, -30], [-40, 4], [40, 40], [-40, -40], [12, -36], [36, 12], [-6, 44], [52, 0], [-52, 14], [0, -56]];
 let strays = [], nextId = 1, spawnT = 4, acv = null, acvT = 40, view = {}, vanView = null;
 SY.list = () => strays;
+SY.van = () => vanView;
 
 /* ---------------- host simulation ---------------- */
 function randSpot(farFrom) {
@@ -45,7 +46,9 @@ G.hooks.host.push(function (pid, m, S) {
       const name = String(m.name || look.n || 'Pet').slice(0, 12);
       if (m.shelter) { shelterAdd(S, { id: nextId++, sp: look.sp, col: look.col, name, owner: pid, petId }); return; }
       const me = playersInTown(S).find((q) => q.pid === pid);
-      strays.push(newStray({ sp: look.sp, col: look.col, name, owner: pid, petId, far: me ? [me.x, me.z] : null }));
+      const ns = newStray({ sp: look.sp, col: look.col, name, owner: pid, petId, far: me ? [me.x, me.z] : null });
+      if (m.stolen && Number.isFinite(+m.x) && Number.isFinite(+m.z)) { const f = W.freeNear(W.areas.town, clamp(+m.x, -60, 60), clamp(+m.z, -80, 80), 0.4); ns.x = f[0]; ns.z = f[1]; ns.stay = 1; ns.stolen = 1; }
+      strays.push(ns);
       S.lost[key] = { name, called: 0 }; G.touch(); break;
     }
     case 'acCall': { const key = pid + ':' + (+m.petId || 0); if (S.lost[key]) { S.lost[key].called = 1; G.touch(); } else if (m.stray) acvT = 0; acvT = Math.min(acvT, 2); break; }
@@ -74,6 +77,7 @@ G.hooks.hostTick.push(function (dt, S) {
   const ps = playersInTown(S);
   strays.forEach((s) => {
     if (s.held) return;
+    if (s.stay) { s.sp2 = 0; return; }
     let flee = null, fd = 4.2; ps.forEach((p) => { if (s.owner === p.pid) return; const d = Math.hypot(p.x - s.x, p.z - s.z); if (d < fd) { fd = d; flee = p; } });
     if (flee) { const dx = s.x - flee.x, dz = s.z - flee.z, d = Math.hypot(dx, dz) || 1; strayMove(s, s.x + dx / d * 3, s.z + dz / d * 3, flee.car ? 2.4 : 3.3, dt); s.tgt = null; return; }
     if (!s.tgt) { s.wait -= dt; if (s.wait <= 0) { const a = Math.random() * 6.28, r = 2 + Math.random() * 6; const f = W.freeNear(W.areas.town, s.x + Math.cos(a) * r, s.z + Math.sin(a) * r, 0.3); s.tgt = f; s.wait = 2 + Math.random() * 4; } else s.sp2 = 0; }
@@ -165,23 +169,47 @@ function lostCheck() {
   const s = sv(), S = GS.S; if (!S || !G.inGame()) return;
   // (re)report missing pets to whoever is hosting this town (once per session)
   const key = (GS.role || '') + ':' + (GS.room ? GS.room.code : 'solo');
-  if (sentKey !== key) { sentKey = key; s.pets.filter((p) => p.missing).forEach((p) => G.doAct({ k: 'lost', petId: p.id, look: Object.assign(GL.Pets.look(p), { n: p.name }), name: p.name, shelter: p.missing === 'shelter' ? 1 : 0 })); }
+  if (sentKey !== key) { sentKey = key; s.pets.filter((p) => p.missing).forEach((p) => G.doAct({ k: 'lost', petId: p.id, look: Object.assign(GL.Pets.look(p), { n: p.name }), name: p.name, shelter: p.missing === 'shelter' ? 1 : 0, stolen: p.missing === 'stolen' ? 1 : 0, x: p.spot ? p.spot[0] : null, z: p.spot ? p.spot[1] : null })); }
   const hr = Math.floor(G.clock() / 60); if (hr === hourSeen) return; const first = hourSeen < 0; hourSeen = hr; if (first) return;
   if (GS.me.area !== 'town' || s.lostDay === G.day() || GS.work) return;
   const out = s.pets.filter((p) => p.out && !p.missing); if (!out.length) return;
   const p = out[Math.floor(Math.random() * out.length)], chance = p.n.f < 35 ? 0.3 : 0.12;
   if (Math.random() >= chance) return;
-  SY.loseMe(p);
+  SY.loseMe(p, Math.random() < (p.n.f < 35 ? 0.2 : 0.4));
 }
-SY.loseMe = function (p) {
-  const s = sv(); s.lostDay = G.day(); p.missing = 'lost'; p.out = false; G.persist();
-  G.doAct({ k: 'lost', petId: p.id, look: Object.assign(GL.Pets.look(p), { n: p.name }), name: p.name });
-  Snd.fx('no'); G.toast('\uD83D\uDE31 Oh no! ' + p.name + ' chased a squirrel and ran off! Look around town or call Animal Control (phone \u2192 \uD83D\uDC3E).', true);
+// pet thief hideouts: behind these buildings (the clue says which one)
+const HIDEOUTS = ['museum', 'pawn', 'school', 'grocery', 'fire', 'arcade', 'steves'];
+const CLUES = ['a trail of fishy-smelling paw prints leads behind ', 'a dropped sack of dog treats was found behind ', 'someone heard a muffled \u201Cwoof\u201D behind ', 'a sneaky footprint + a feather point behind '];
+function hideout(id) { id = id || HIDEOUTS[Math.floor(Math.random() * HIDEOUTS.length)]; const b = W.bld(id); const z = b.door === 'n' ? b.z1 + 2.2 : b.z0 - 2.2; const f = W.freeNear(W.areas.town, (b.x0 + b.x1) / 2, z, 0.5); return { id, name: b.name, x: f[0], z: f[1] }; }
+let thief = null;
+function thiefRun(x, z) {
+  if (thief) W.areas.town.g.remove(thief.ch.g);
+  const ch = MD.avatar({ skin: GL.SKINS[2], hair: 'short', hc: '#111827', top: 'tee', tc: '#111827', bc: '#111827', hat: 'cap', hatc: '#111827', gl: 'shades' }); ch.g.position.set(x, 0, z); W.areas.town.g.add(ch.g);
+  MD.sph(0.32, '#a16207', ch.g, -0.25, 1.1, -0.25); const tag = W.textSprite('\uD83E\uDDB9 PAWS McGEE', { size: 30, h: 0.4, bg: 'rgba(17,24,39,.9)' }); tag.position.set(0, 2.4, 0); ch.g.add(tag);
+  const a = Math.atan2(x - GS.me.x, z - GS.me.z); thief = { ch, x, z, yaw: a, t: 3.2 };
+}
+SY.thief = () => !!thief;
+G.hooks.tick.push((dt) => { if (!thief) return; thief.t -= dt; const r = W.move(W.areas.town, thief.x, thief.z, Math.sin(thief.yaw) * 7 * dt, Math.cos(thief.yaw) * 7 * dt, 0.3); thief.x = r[0]; thief.z = r[1]; thief.ch.g.position.set(thief.x, 0, thief.z); thief.ch.g.rotation.y = thief.yaw; thief.ch.anim(dt, 7); if (thief.t <= 0) { W.fx('smoke', thief.x, 1, thief.z, 6, 0.6); W.areas.town.g.remove(thief.ch.g); thief = null; } });
+SY.loseMe = function (p, stolen, hid) {
+  const s = sv(); s.lostDay = G.day(); p.out = false;
+  const px = GS.me.x, pz = GS.me.z;
+  if (stolen) {
+    const h = hideout(hid); p.missing = 'stolen'; p.spot = [+h.x.toFixed(1), +h.z.toFixed(1)]; p.clue = 'Clue: ' + CLUES[Math.floor(Math.random() * CLUES.length)] + 'the ' + h.name + '!'; G.persist();
+    G.doAct({ k: 'lost', petId: p.id, look: Object.assign(GL.Pets.look(p), { n: p.name }), name: p.name, stolen: 1, x: h.x, z: h.z });
+    if (W.cur && W.cur.id === 'town') thiefRun(px + 1.5, pz + 1);
+    Snd.fx('no'); G.toast('\uD83E\uDDB9 HEY! Paws McGee, the cartoon pet-napper, swiped ' + p.name + '! \uD83D\uDD75\uFE0F ' + p.clue, true);
+    G.notify && G.notify('animal', '\uD83E\uDDB9', 'Animal Control', p.name + ' was STOLEN! ' + p.clue + ' Tap for help.');
+  } else {
+    p.missing = 'lost'; p.spot = null; p.clue = null; G.persist();
+    G.doAct({ k: 'lost', petId: p.id, look: Object.assign(GL.Pets.look(p), { n: p.name }), name: p.name });
+    Snd.fx('no'); G.toast('\uD83D\uDE31 Oh no! ' + p.name + ' chased a squirrel and ran off! Look around town or call Animal Control (phone \u2192 \uD83D\uDC3E).', true);
+    G.notify && G.notify('animal', (GL.SPECIES[p.sp] || {}).icon || '\uD83D\uDC3E', 'Animal Control', p.name + ' is MISSING! They ran off chasing a squirrel. Tap for help.');
+  }
 };
 G.statusParts.push(() => {
   const s = sv(); let o = '';
   const w = GS.work && GS.work.ac; if (w) o += '<button class="spill green" data-a="acEnd">\uD83D\uDE90 ' + Math.ceil(w.t) + 's \u00b7 \uD83E\uDD45 ' + w.carry.length + '/' + CARRY + ' \u00b7 \u2705 ' + w.delivered + ' \u00b7 END</button>';
-  const miss = s.pets.filter((p) => p.missing); if (miss.length) o += '<button class="spill red" data-a="app" data-v="animal">\uD83D\uDC3E ' + esc(miss[0].name) + (miss[0].missing === 'shelter' ? ' is at the shelter!' : ' is missing!') + '</button>';
+  const miss = s.pets.filter((p) => p.missing); if (miss.length) o += '<button class="spill red petAlert" data-a="app" data-v="animal"><em>' + ((GL.SPECIES[miss[0].sp] || {}).icon || '\uD83D\uDC3E') + '</em> ' + esc(miss[0].name) + (miss[0].missing === 'stolen' ? ' was STOLEN! \uD83E\uDDB9' : miss[0].missing === 'shelter' ? ' is at the shelter!' : ' is missing!') + '</button>';
   return o;
 });
 
@@ -189,9 +217,11 @@ G.statusParts.push(() => {
 UI.app_animal = function () {
   const s = sv(), S = GS.S || {}, miss = s.pets.filter((p) => p.missing);
   let h = head('\uD83D\uDC3E Animal Control') + '<p class="sub small">Grokville Animal Control \u00b7 open 24/7 \u00b7 \u201CWe bring every tail home.\u201D</p>';
-  if (miss.length) h += '<div class="list">' + miss.map((p) => { const called = S.lost && S.lost[GS.pid + ':' + p.id] && S.lost[GS.pid + ':' + p.id].called; return '<div class="lrow"><b>' + esc(p.name) + '<small>' + (p.missing === 'shelter' ? 'Safe at the Animal Shelter \u2014 go pick them up!' : called ? 'Search in progress\u2026 \uD83D\uDE90' : 'Missing in town') + '</small></b><span>' + (p.missing === 'shelter' ? btn('guideB', 'shelter', '\uD83E\uDDED GO', 'small blue') : btn('acCall', p.id, called ? '\uD83D\uDCDE CALLED' : '\uD83D\uDCDE REPORT', 'small red', !!called)) + '</span></div>'; }).join('') + '</div>';
+  if (miss.length) h += '<div class="list">' + miss.map((p) => { const called = S.lost && S.lost[GS.pid + ':' + p.id] && S.lost[GS.pid + ':' + p.id].called; return '<div class="lrow"><b>' + esc(p.name) + '<small>' + (p.missing === 'shelter' ? 'Safe at the Animal Shelter \u2014 go pick them up!' : (p.missing === 'stolen' ? '\uD83E\uDDB9 STOLEN by Paws McGee! ' + esc(p.clue || '') + ' ' : '') + (called ? 'Search in progress\u2026 \uD83D\uDE90' : p.missing === 'stolen' ? '' : 'Missing in town \u2014 wandering around.')) + '</small></b><span>' + (p.missing === 'shelter' ? btn('guideB', 'shelter', '\uD83E\uDDED GO', 'small blue') : btn('acCall', p.id, called ? '\uD83D\uDCDE CALLED' : '\uD83D\uDCDE REPORT', 'small red', !!called)) + '</span></div>'; }).join('') + '</div>';
   else h += '<p class="sub">All your pets are safe at home \uD83D\uDC96</p>';
   const n = (GS.role === 'client' ? ((GS.mob && GS.mob.strays) || []).filter((q) => !q[8]).length : strays.filter((q) => !q.owner).length);
+  if (miss.some((p) => p.missing === 'stolen' && p.spot)) h += btn('petGuide', miss.find((p) => p.missing === 'stolen' && p.spot).id, '\uD83E\uDDED FOLLOW THE CLUE', 'blue');
+  h += '<div class="acJob"><h3>\uD83D\uDE90 Animal Control job</h3>' + (s.job === 'animalcontrol' ? '<p class="sub small">Drive the van, net strays, drop them at the shelter (90 seconds).</p>' + btn('acStart', null, '\uD83D\uDE90 START SHIFT', 'green', !!GS.work) : '<p class="sub small">Want to catch strays yourself? It\u2019s a real job!</p>' + btn('acHire', null, '\uD83D\uDCBC GET THE ANIMAL CONTROL JOB', 'green')) + '</div>';
   h += '<h3>Strays around town: ' + n + '</h3>' + btn('acStray', null, '\uD83D\uDCDE REPORT A STRAY', 'blue', !n) + '<p class="sub small">Strays get taken to the shelter, where anyone can adopt them. Want to catch them yourself? Get the Animal Control job at City Hall!</p>' + btn('guideB', 'shelter', '\uD83E\uDDED GUIDE TO SHELTER', 'small');
   open('animal', h);
 };
@@ -226,6 +256,14 @@ function shelterView() {
 }
 
 /* ---------------- Animal Control career shift ---------------- */
+// how to start: phone -> Animal Ctrl (or Career) -> START SHIFT, or walk to the van outside the shelter / van keys inside and tap START SHIFT
+H.acStart = () => { G.closePanel(); if (sv().job !== 'animalcontrol') { SY.offer(); return; } GL.Work.request('animalcontrol'); };
+H.acHire = () => { UI.H.takeJob('animalcontrol'); G.guide = null; setTimeout(() => SY.offer(), 250); };
+H.petGuide = (id) => { const p = sv().pets.find((q) => q.id === +id); if (!p || !p.spot) return; G.guide = { x: p.spot[0], z: p.spot[1], label: p.name + '?' }; G.closePanel(); G.toast('\uD83D\uDD75\uFE0F Follow the arrow to the hideout. Tap CALL when you see ' + p.name + '!'); };
+SY.offer = function () {
+  const s = sv(), hired = s.job === 'animalcontrol';
+  open('acjob', head('\uD83D\uDE90 Animal Control') + '<div class="big">\uD83D\uDC15\u200D\uD83E\uDDBA\uD83D\uDE90</div><p class="sub">' + (hired ? 'You\u2019re on the team! Drive the van, tap <b>NET</b> next to strays (\uD83D\uDC3E green tags), then <b>DROP OFF</b> at the shelter. 90 seconds per shift.' : 'Catch strays, reunite lost pets with their families and earn money! Take the job to start driving the van.') + '</p>' + (hired ? btn('acStart', null, '\uD83D\uDE90 START SHIFT', 'green', !!GS.work) : btn('acHire', null, '\uD83D\uDCBC TAKE THE JOB', 'green')) + btn('close', null, 'LATER'));
+};
 SY.startShift = function () {
   const p = park();
   G.closePanel(); GS.me.act = null;

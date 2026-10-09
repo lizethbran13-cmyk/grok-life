@@ -6,11 +6,11 @@ const GS = G.GS, sv = () => G.save(), ang = G.ang, esc = window.GrokNet.esc;
 const N = GL.NPC = { list: [] };
 // work: [area, hot kind/id to stand near]; home: nh_ area or null (goes "home" off-screen)
 const DEFS = [
-  { id: 'maxine', name: 'Mayor Maxine', role: 'Mayor', emo: '\uD83C\uDF96\uFE0F', work: ['cityhall', 'jobs'], look: { skin: 2, hair: 'bob', hairCol: '#9ca3af', top: 'suit', topCol: '#7c3aed', pants: '#1f2937', hat: 'none', glasses: 'round' }, lines: ['Welcome to Maple Town! Need a job? Talk to me at City Hall.', 'Every citizen makes this town brighter!', 'Have you visited the pond? The ducks are my favourite.'] },
+  { id: 'maxine', name: 'Mayor Maxine', role: 'Mayor', emo: '\uD83C\uDF96\uFE0F', work: ['cityhall', 'jobs'], look: { skin: 2, hair: 'bob', hairCol: '#9ca3af', top: 'suit', topCol: '#7c3aed', pants: '#1f2937', hat: 'none', glasses: 'round' }, lines: ['Welcome to Grokville! Need a job? Talk to me at City Hall.', 'Every citizen makes this town brighter!', 'Have you visited the pond? The ducks are my favourite.'] },
   { id: 'rosa', name: 'Rosa', role: 'Grocer', emo: '\uD83E\uDD6C', work: ['grocery', 'shop'], home: 'nh_rosa', look: { skin: 3, hair: 'bun', hairCol: '#1f2937', top: 'apron', topCol: '#16a34a', pants: '#334155' }, lines: ['Fresh apples today, mija!', 'A full tummy is a happy tummy.', 'My bungalow is the orange one, come knock sometime!'] },
   { id: 'priya', name: 'Dr. Priya', role: 'Doctor', emo: '\uD83E\uDE7A', work: ['hospital', 'clinic'], look: { skin: 3, hair: 'long', hairCol: '#111827', top: 'coat', topCol: '#f8fafc', pants: '#1e3a8a', glasses: 'round' }, lines: ['Remember to sleep and drink water!', 'Feeling tired? A check-up helps.', 'Laughter is good medicine. So is a nap.'] },
   { id: 'bo', name: 'Chef Bo', role: 'Chef', emo: '\uD83D\uDC68\u200D\uD83C\uDF73', work: ['cafe', 'shop'], look: { skin: 1, hair: 'short', hairCol: '#78350f', top: 'tee', topCol: '#f8fafc', pants: '#111827', hat: 'chef' }, lines: ['Try the pancakes, they\u2019re fluffy like clouds!', 'Cooking is just love you can eat.', 'You can cook at home with groceries, you know!'] },
-  { id: 'dee', name: 'Officer Dee', role: 'Police', emo: '\uD83D\uDC6E', work: ['police', 'work'], look: { skin: 4, hair: 'pony', hairCol: '#111827', top: 'tee', topCol: '#1e40af', pants: '#1e3a8a', hat: 'police' }, lines: ['Look both ways at the crosswalk!', 'Maple Town is the safest town around.', 'Want to join the force? Ask at City Hall!'] },
+  { id: 'dee', name: 'Officer Dee', role: 'Police', emo: '\uD83D\uDC6E', work: ['police', 'work'], look: { skin: 4, hair: 'pony', hairCol: '#111827', top: 'tee', topCol: '#1e40af', pants: '#1e3a8a', hat: 'police' }, lines: ['Look both ways at the crosswalk!', 'Grokville is the safest town around.', 'Want to join the force? Ask at City Hall!'] },
   { id: 'blaze', name: 'Captain Blaze', role: 'Firefighter', emo: '\uD83D\uDE92', work: ['fire', 'work'], look: { skin: 2, hair: 'short', hairCol: '#b45309', top: 'tee', topCol: '#dc2626', pants: '#1f2937', hat: 'helmet' }, lines: ['Stop, drop and roll!', 'Our truck is the shiniest in the county.', 'Heroes come in all sizes!'] },
   { id: 'lily', name: 'Ms. Lily', role: 'Teacher', emo: '\uD83D\uDCDA', work: ['school', 'work'], look: { skin: 0, hair: 'curly', hairCol: '#facc15', top: 'sweater', topCol: '#f472b6', pants: '#475569', glasses: 'round' }, lines: ['Reading is a superpower!', 'Did you know a group of flamingos is a flamboyance?', 'Never stop learning!'] },
   { id: 'pawla', name: 'Dr. Pawla', role: 'Vet', emo: '\uD83D\uDC3E', work: ['petstore', 'adopt'], look: { skin: 1, hair: 'pony', hairCol: '#a16207', top: 'coat', topCol: '#a7f3d0', pants: '#0f766e' }, lines: ['Every pet deserves a loving home.', 'Rats are super smart, they can learn tricks!', 'Tortoises love dandelions.'] },
@@ -65,9 +65,30 @@ function walk(n, dt, tx, tz, spd) { // reused Grok Pets steering: face the way y
   return false;
 }
 function busy(n) { return GS.talk === n; }
+// cartoon bonk: the NPC tumbles (stars!), pops back up and is VERY grumpy for a bit. No one gets hurt for real.
+function tumble(n, dt) {
+  const g = n.ch.g;
+  if (n.hitT > 0) {
+    n.hitT -= dt; const r = W.move(W.areas[n.area] || W.areas.town, n.x, n.z, n.kv[0] * dt, n.kv[1] * dt, 0.3); n.x = r[0]; n.z = r[1]; n.kv[0] *= Math.pow(0.15, dt); n.kv[1] *= Math.pow(0.15, dt);
+    n.spin = (n.spin || 0) + dt * 12; g.rotation.set(n.hitT > 0.5 ? -Math.PI / 2 * Math.min(1, (1.6 - n.hitT) * 4) : -Math.PI / 2 * Math.max(0, n.hitT * 2), n.spin, 0);
+    if (n.hitT <= 0) { g.rotation.set(0, n.yaw, 0); n.spin = 0; }
+  } else { n.madT -= dt; n.yaw += ang(Math.atan2(GS.me.x - n.x, GS.me.z - n.z) - n.yaw) * Math.min(1, dt * 6); g.rotation.set(0, n.yaw, 0); g.position.y = Math.abs(Math.sin(n.madT * 9)) * 0.12; if (n.madT <= 0) { g.position.y = 0; if (n.mad) { g.remove(n.mad); n.mad = null; } } }
+  n.sp = 0; n.inTown = n.area === 'town'; const vis = !!W.cur && n.area === W.cur.id; g.visible = vis;
+  if (vis) { g.position.x = n.x; g.position.z = n.z; n.ch.anim(dt, 0, n.madT > 0, null); }
+}
+N.bonk = function (n, vx, vz, yell) {
+  if (!n || n.hitT > 0) return false;
+  n.hitT = 1.6; n.madT = 4; n.kv = [vx, vz]; n.path = null;
+  if (n.mad) n.ch.g.remove(n.mad);
+  n.mad = W.textSprite(yell || '\uD83D\uDE20 HEY!! WATCH IT!', { size: 34, h: 0.5, bg: 'rgba(220,38,38,.92)' }); n.mad.position.set(0, 2.6, 0); n.ch.g.add(n.mad);
+  W.fx('star', n.x, 2, n.z, 7, 0.6);
+  const f = fr(n.def.id); f.fr = Math.max(0, f.fr - 1);
+  return true;
+};
 N.tick = function (dt) {
   const m = G.clock ? G.clock() : 600;
   N.list.forEach((n) => {
+    if (n.hitT > 0 || n.madT > 0) { tumble(n, dt); return; }
     const p = plan(n, m);
     if (!busy(n)) {
       if (p.town) {

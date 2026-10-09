@@ -32,7 +32,7 @@ try {
   // older saves (before health / crime / animal control) get safe defaults
   if (!(save.hp >= 0 && save.hp <= 100)) save.hp = 100; if (!Array.isArray(save.bills)) save.bills = []; if (!Array.isArray(save.shelter)) save.shelter = [];
   if (save.inj && !(GL.INJ && GL.INJ[save.inj.id])) save.inj = null; if (!save.crime.loot || typeof save.crime.loot !== 'object') save.crime.loot = {}; if (!save.crime.done || typeof save.crime.done !== 'object') save.crime.done = {};
-  (save.pets || []).forEach((p) => { if (p.missing && p.missing !== 'lost' && p.missing !== 'shelter') p.missing = 'lost'; });
+  (save.pets || []).forEach((p) => { if (p.missing && p.missing !== 'lost' && p.missing !== 'shelter' && p.missing !== 'stolen') p.missing = 'lost'; });
 } catch (e) { /* ignore */ }
 if (!save.name) { const gp = GN.savedProfile(); if (gp.hasName) { save.name = gp.name; save.color = gp.color; } }
 let saveT = 0;
@@ -367,7 +367,7 @@ function interact(h) {
   switch (h.kind) {
     case 'door': {
       if (h.to === 'arcade') { UI.arcade(); return; }
-      if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to) && save.crime.on && (h.to === 'museum' || h.to === 'jewelry' || h.to === 'bank')) { G.toast('\uD83E\uDD77 You tiptoe in through the back window\u2026'); travel(h.to); return; }
+      if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to) && save.crime.on && (h.to === 'museum' || h.to === 'jewelry' || h.to === 'bank' || h.to === 'tech')) { G.toast('\uD83E\uDD77 You tiptoe in through the back window\u2026'); travel(h.to); return; }
       if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to)) { const b = W.bld(h.to); G.toast(b.name + ' is closed right now. Open ' + G.timeStr(b.open[0] * 60) + ' \u2013 ' + G.timeStr(b.open[1] * 60) + '.', true); Snd.fx('no'); return; }
       travel(h.to); return;
     }
@@ -475,6 +475,8 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') { e.preventDefault(); pressAct(); }
   else if (e.code === 'KeyP' || e.code === 'Tab') { e.preventDefault(); GL.UI.phone(); }
   else if (e.code === 'KeyH' && GL.Cars) GL.Cars.honk();
+  else if (e.code === 'KeyQ') G.cam.rot(-0.35); else if (e.code === 'KeyR') G.cam.rot(0.35);
+  else if (e.code === 'Equal' || e.code === 'NumpadAdd') G.cam.zoom(0.85); else if (e.code === 'Minus' || e.code === 'NumpadSubtract') G.cam.zoom(1.18); else if (e.code === 'KeyC') G.cam.reset();
 });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
@@ -497,13 +499,52 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 G.input = function () { // world-space move input (-1..1)
   let ix = joy.x, iz = joy.y;
   if (keys.KeyA || keys.ArrowLeft) ix -= 1; if (keys.KeyD || keys.ArrowRight) ix += 1; if (keys.KeyW || keys.ArrowUp) iz -= 1; if (keys.KeyS || keys.ArrowDown) iz += 1;
-  const m = Math.hypot(ix, iz); if (m > 1) { ix /= m; iz /= m; } return [ix, iz, Math.min(1, m)];
+  const m = Math.hypot(ix, iz); if (m > 1) { ix /= m; iz /= m; }
+  const yw = W.camYaw || 0; if (yw) { const c = Math.cos(yw), s = Math.sin(yw), rx = ix * c + iz * s, rz = -ix * s + iz * c; ix = rx; iz = rz; }
+  return [ix, iz, Math.min(1, m)];
+};
+// free camera: orbit (W.camYaw), tilt (W.camTilt) and zoom (W.camUZ). Recenter puts it back to the classic view.
+G.cam = {
+  rot(d) { W.camYaw = G.ang((W.camYaw || 0) + d); G.cam.ui(); },
+  tilt(d) { W.camTilt = clamp((W.camTilt || 1) + d, 0.55, 1.45); G.cam.ui(); },
+  zoom(f) { W.camUZ = clamp((W.camUZ || 1) * f, 0.55, 1.9); G.cam.ui(); },
+  reset() { W.camYaw = 0; W.camTilt = 1; W.camUZ = 1; G.cam.ui(); },
+  moved: () => Math.abs(W.camYaw || 0) > 0.02 || Math.abs((W.camTilt || 1) - 1) > 0.02 || Math.abs((W.camUZ || 1) - 1) > 0.02,
+  ui() { const b = $('bCamC'); if (b) b.classList.toggle('on', G.cam.moved()); }
 };
 (function taps() {
-  const cv = $('c'); let down = null;
-  cv.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; Snd.init(); });
-  cv.addEventListener('pointerup', (e) => { if (!down) return; const d = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t; down = null; if (d < 16 && dt < 600) tapAt(e.clientX, e.clientY); });
+  const cv = $('c'), pts = new Map(); let down = null, drag = false, pinch = 0;
+  cv.addEventListener('pointerdown', (e) => {
+    Snd.init(); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 1) { down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; drag = false; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* ignore */ } }
+    else { down = null; drag = true; const a = [...pts.values()]; pinch = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; }
+  });
+  cv.addEventListener('pointermove', (e) => {
+    const p = pts.get(e.pointerId); if (!p) return; const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+    if (!inGame() || GS.decor) return;
+    if (pts.size >= 2) { const a = [...pts.values()], d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; G.cam.zoom(pinch / d); pinch = d; return; }
+    if (down && !drag && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 16) drag = true;
+    if (drag && W.cur) { G.cam.rot(-dx * 0.008); G.cam.tilt(dy * 0.004); }
+  });
+  const up = (e) => {
+    pts.delete(e.pointerId); if (pts.size) return;
+    if (down && e.type === 'pointerup' && !drag) { const d = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t; if (d < 16 && dt < 600) tapAt(e.clientX, e.clientY); }
+    down = null; drag = false;
+  };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('lostpointercapture', (e) => { if (pts.has(e.pointerId)) up(e); });
+  cv.addEventListener('wheel', (e) => { if (!inGame()) return; e.preventDefault(); G.cam.zoom(e.deltaY > 0 ? 1.1 : 0.9); }, { passive: false });
+  [['bCamIn', () => G.cam.zoom(0.82)], ['bCamOut', () => G.cam.zoom(1.22)], ['bCamC', () => G.cam.reset()]].forEach((q) => { const b = $(q[0]); if (b) b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); q[1](); Snd.fx('pop'); }); });
 })();
+// phone notifications: a banner at the top (tap opens the app) + a red dot on the phone and the app icon
+G.badges = {};
+G.notify = function (app, icon, title, text) {
+  G.badges[app] = 1; $('bPhone').classList.add('badge');
+  let n = $('notif'); if (!n) { n = document.createElement('button'); n.id = 'notif'; n.type = 'button'; document.body.appendChild(n); n.addEventListener('click', () => { const a = n.dataset.app; n.classList.remove('on'); document.body.classList.remove('hasNotif'); if (a && GL.UI['app_' + a]) GL.UI.H.app(a); }); }
+  n.dataset.app = app; n.innerHTML = '<i>' + icon + '</i><span><b>' + esc(title) + '</b> <small>now</small><br>' + esc(text) + '</span>';
+  n.classList.remove('on'); void n.offsetWidth; n.classList.add('on'); document.body.classList.add('hasNotif'); Snd.fx('ding');
+  clearTimeout(G.notify.t); G.notify.t = setTimeout(() => { n.classList.remove('on'); document.body.classList.remove('hasNotif'); }, 7000);
+};
+G.clearBadge = function (app) { delete G.badges[app]; if (!Object.keys(G.badges).length) $('bPhone').classList.remove('badge'); };
 function tapAt(x, y) {
   if (GS.decor && GL.UI.decorTap) { GL.UI.decorTap(x, y); return; }
   if (!freeToAct() || (GL.Cars && GL.Cars.driving())) return;

@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#38bdf8" />
   <title>GROK LIFE</title>
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2338bdf8'/%3E%3Cpath d='M12 34 32 16 52 34V52H12Z' fill='%23fff'/%3E%3Crect x='27' y='38' width='10' height='14' fill='%23ff6bd6'/%3E%3C/svg%3E" />
 </head>
 <body>
@@ -26,10 +26,11 @@
     <div id="status"></div>
     <div id="mates"></div>
     <div id="prompt" class="hidden"></div>
-    <div id="joyzone"><div id="joybase"><div id="joyknob"></div></div><div id="joyhint">DRAG TO WALK<br><small>or tap a spot</small></div></div>
+    <div id="joyzone"><div id="joybase"><div id="joyknob"></div></div><div id="joyhint">DRAG TO WALK<br><small>tap a spot · drag the world to look around</small></div></div>
     <button id="bEmote" class="hidden" type="button" aria-label="Emotes">&#128075;</button>
     <button id="bAct" type="button"><span id="actT">&bull;</span></button>
-    <div id="kbdhelp">WASD move &middot; E / Space act &middot; P phone &middot; H honk &middot; M mute</div>
+    <div id="camBtns"><button id="bCamIn" type="button" aria-label="Zoom in">&#65291;</button><button id="bCamOut" type="button" aria-label="Zoom out">&#65293;</button><button id="bCamC" type="button" aria-label="Recenter camera">&#127919;</button></div>
+    <div id="kbdhelp">WASD move &middot; drag/Q/R look &middot; +/- zoom &middot; E / Space act &middot; P phone &middot; H honk &middot; M mute</div>
     <div id="guide" class="hidden"><i>&#10148;</i><b></b></div>
   </div>
   <div id="tut" class="hidden"></div>
@@ -52,7 +53,7 @@
         <button id="bSolo" class="btn primary" type="button">PLAY</button>
         <button id="bOnline" class="btn blue" type="button">PLAY WITH FRIENDS</button>
       </div>
-      <p class="foot">Make a character, get a job, buy a house, adopt pets and drive around Maple Town!</p>
+      <p class="foot">Make a character, get a job, buy a house, adopt pets and drive around Grokville!</p>
       <a id="arcadeLink" class="foot link" href="https://lizethbran13-cmyk.github.io/grok-arcade/">&larr; Grok Arcade</a>
     </div>
   </div>
@@ -85,19 +86,20 @@
   <script src="three.min.js"></script>
   <script src="peerjs.min.js"></script>
   <script src="grok-net.js"></script>
-  <script src="js/data.js?v=4"></script>
-  <script src="js/models.js?v=4"></script>
-  <script src="js/world.js?v=4"></script>
-  <script src="js/audio.js?v=4"></script>
-  <script src="js/game.js?v=4"></script>
-  <script src="js/ui.js?v=4"></script>
-  <script src="js/cars.js?v=4"></script>
-  <script src="js/npc.js?v=4"></script>
-  <script src="js/pets.js?v=4"></script>
-  <script src="js/work.js?v=4"></script>
-  <script src="js/health.js?v=4"></script>
-  <script src="js/crime.js?v=4"></script>
-  <script src="js/strays.js?v=4"></script>
+  <script src="js/data.js?v=5"></script>
+  <script src="js/models.js?v=5"></script>
+  <script src="js/world.js?v=5"></script>
+  <script src="js/audio.js?v=5"></script>
+  <script src="js/game.js?v=5"></script>
+  <script src="js/ui.js?v=5"></script>
+  <script src="js/cars.js?v=5"></script>
+  <script src="js/npc.js?v=5"></script>
+  <script src="js/pets.js?v=5"></script>
+  <script src="js/work.js?v=5"></script>
+  <script src="js/health.js?v=5"></script>
+  <script src="js/crime.js?v=5"></script>
+  <script src="js/strays.js?v=5"></script>
+  <script src="js/autoshop.js?v=5"></script>
   <script>GL.G.boot();</script>
 </body>
 </html>

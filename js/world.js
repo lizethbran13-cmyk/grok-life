@@ -196,7 +196,10 @@ const BLD = [
   { id: 'jewelry', name: 'Glitter & Gold Jewelers', icon: '\uD83D\uDC8D', x0: 15.5, x1: 24.5, z0: -72, z1: -61, door: 's', col: '#fdf4ff', roof: '#a21caf', sign: 'GLITTER & GOLD', open: [9, 20] },
   { id: 'shelter', name: 'Grokville Animal Shelter', icon: '\uD83D\uDC36', x0: 44, x1: 57, z0: -72, z1: -60, door: 's', col: '#ecfccb', roof: '#65a30d', sign: 'ANIMAL SHELTER', open: [0, 24] },
   { id: 'clinic', name: 'Maple Clinic', icon: '\uD83E\uDE7A', x0: 50, x1: 60, z0: 58, z1: 70, door: 'n', col: '#ecfeff', roof: '#0891b2', sign: 'CLINIC', open: [8, 20] },
-  { id: 'pawn', name: 'Sid\u2019s Pawn & Stuff', icon: '\uD83C\uDFA9', x0: -60, x1: -50, z0: 58, z1: 69, door: 'n', col: '#e7e5e4', roof: '#44403c', sign: 'SID\u2019S PAWN', open: [0, 24] }
+  { id: 'pawn', name: 'Sid\u2019s Pawn & Stuff', icon: '\uD83C\uDFA9', x0: -60, x1: -50, z0: 58, z1: 69, door: 'n', col: '#e7e5e4', roof: '#44403c', sign: 'SID\u2019S PAWN', open: [0, 24] },
+  { id: 'tech', name: 'Byte Buy Tech Store', icon: '\uD83D\uDCBB', x0: -62, x1: -55, z0: -26, z1: -14, door: 's', col: '#e0e7ff', roof: '#4338ca', sign: 'BYTE BUY', open: [9, 21] },
+  { id: 'hanks', name: 'Honest Hank\u2019s Auto Care', icon: '\uD83D\uDEE0\uFE0F', x0: 55, x1: 62, z0: -24, z1: -12, door: 'n', col: '#dbeafe', roof: '#1d4ed8', sign: 'HONEST HANK\u2019S', open: [0, 24] },
+  { id: 'steves', name: 'Sketchy Steve\u2019s Fix-It-Quik', icon: '\uD83E\uDE9B', x0: -62, x1: -55, z0: 12, z1: 24, door: 's', col: '#fde68a', roof: '#78350f', sign: 'STEVE\u2019S FIX-IT', open: [0, 24] }
 ];
 W.BLD = BLD; W.bld = (id) => BLD.find((b) => b.id === id);
 W.isOpen = function (id, min) { const b = W.bld(id); if (!b) return true; const h = (min / 60) % 24; return b.open[0] === 0 && b.open[1] === 24 ? true : h >= b.open[0] && h < b.open[1]; };
@@ -350,10 +353,12 @@ function decorateBuildings(A) {
   // Jeweler sparkle sign
   { const b = W.bld('jewelry'); const r = signPlane('\uD83D\uDC8D', 1.2, 1.2, '#a21caf'); r.position.set(b.x1 - 1.2, 3.6, b.z1 + 0.1); g.add(r); }
   // Shelter: fenced yard + van parking
-  { const b = W.bld('shelter'); const p = signPlane('\uD83D\uDC3E', 1.4, 1.4, '#65a30d'); p.position.set(b.x0 + 1.4, 3.6, b.z1 + 0.1); g.add(p); ground(A, 7, 4, '#9ca3af', b.x1 - 3.5, b.z1 + 2.4, 0.095); W.shelterPark = [b.x1 - 3.5, b.z1 + 2.6, Math.PI / 2]; }
+  { const b = W.bld('shelter'); const p = signPlane('\uD83D\uDC3E', 1.4, 1.4, '#65a30d'); p.position.set(b.x0 + 1.4, 3.6, b.z1 + 0.1); g.add(p); ground(A, 7, 4, '#9ca3af', b.x1 - 3.5, b.z1 + 2.4, 0.095); W.shelterPark = [b.x1 - 3.5, b.z1 + 2.6, Math.PI / 2]; const vk = hot(A, { id: 'acstart', kind: 'work', career: 'animalcontrol', x: b.x1 - 3.5, z: b.z1 + 2.6, reach: 2.6, name: 'Animal Control Van', label: 'START SHIFT' }); marker(A, vk, '\uD83D\uDE90 ANIMAL CONTROL \u00b7 START SHIFT', 'rgba(77,124,15,.92)', 2.6); }
   // Clinic: red cross
   { const b = W.bld('clinic'); box(1.8, 0.5, 0.2, M('#ef4444', { emissive: '#7f1d1d' }), g, b.cx + 3, 3.8, b.z0 - 0.15); box(0.5, 1.8, 0.2, M('#ef4444', { emissive: '#7f1d1d' }), g, b.cx + 3, 3.8, b.z0 - 0.15); }
   // Pawn: neon hat + shady awning
+  { const b = W.bld('hanks'); const t = signPlane('\u2B50 5 STARS', 2.2, 0.6, '#1d4ed8'); t.position.set(b.cx, 4.2, b.z0 - 0.12); t.rotation.y = Math.PI; g.add(t); ground(A, 6, 4.5, '#6b7280', b.cx, b.z0 - 3.4, 0.095); W.shopPark = W.shopPark || {}; W.shopPark.hanks = [b.cx - 1.5, b.z0 - 3.6, -Math.PI / 2]; }
+  { const b = W.bld('steves'); const t = signPlane('MOSTLY FIXED!', 2.6, 0.6, '#b45309'); t.position.set(b.cx, 4.2, b.z1 + 0.12); g.add(t); ground(A, 6, 4.5, '#78716c', b.cx, b.z1 + 3.4, 0.095); for (let i = 0; i < 3; i++) cyl(0.42, 0.28, '#1f2937', g, b.x0 + 0.8, 0.15 + i * 0.28, b.z1 + 1.6); obsC(A, b.x0 + 0.8, b.z1 + 1.6, 0.45); W.shopPark = W.shopPark || {}; W.shopPark.steves = [b.cx + 1.5, b.z1 + 3.6, Math.PI / 2]; }
   { const b = W.bld('pawn'); const ht = signPlane('\uD83C\uDFA9', 1.2, 1.2, '#44403c'); ht.position.set(b.x0 + 1.4, 3.6, b.z0 - 0.1); ht.rotation.y = Math.PI; g.add(ht); }
   // hiding spots: big leafy hedges you can duck into when you\u2019re in trouble (also fun for hide & seek)
   W.hides = [];
@@ -642,7 +647,7 @@ function buildInteriors() {
   { const st = MD.avatar({ skin: GL.SKINS[1], hair: 'ponytail', hc: '#a16207', top: 'jacket', tc: '#65a30d', bc: '#1f2937', hat: 'cap', hatc: '#f59e0b' }); st.g.position.set(-4, 0, -1.6); A.g.add(st.g); }
   hot(A, { id: 'adopt', kind: 'shelter', x: -4, z: 0.6, reach: 1.8, name: 'Adopt a Rescue', label: 'ADOPT' });
   hot(A, { id: 'lost', kind: 'lostfound', x: 4.5, z: 0.6, reach: 1.8, name: 'Lost & Found Pets', label: 'LOST PETS' });
-  hot(A, { id: 'work', kind: 'work', career: 'animalcontrol', x: 7.2, z: 2.6, reach: 1.7, name: 'Van Keys (Animal Control)', label: 'WORK' });
+  { const vk = hot(A, { id: 'work', kind: 'work', career: 'animalcontrol', x: 7.2, z: 2.6, reach: 1.7, name: 'Van Keys (Animal Control)', label: 'START SHIFT' }); marker(A, vk, '\uD83D\uDD11 START SHIFT', 'rgba(77,124,15,.92)', 2.2); }
   label(A, '\uD83D\uDC36 GROKVILLE ANIMAL SHELTER', 0, 3.0, -5.6, 'rgba(101,163,13,.92)');
   // clinic
   A = room('clinic', 16, 11, tileTex('#f0fdfa', '#ccfbf1', 8, 5.5), '#ecfeff'); A.label = 'Maple Clinic';
@@ -659,6 +664,32 @@ function buildInteriors() {
   { const sid = MD.avatar({ skin: GL.SKINS[2], hair: 'short', hc: '#1f2937', top: 'jacket', tc: '#57534e', bc: '#1f2937', hat: 'cowboy', hatc: '#1f2937', gl: 'shades' }); sid.g.position.set(0, 0, -3.7); A.g.add(sid.g); }
   hot(A, { id: 'fence', kind: 'fence', x: 0, z: -1.4, reach: 1.9, name: 'Shady Sid', label: 'TALK' });
   label(A, '\uD83C\uDFA9 SID\u2019S PAWN & STUFF', 0, 3.0, -4.6, 'rgba(68,64,60,.92)');
+  // Byte Buy tech store (normal shop; a heist target when the crime path is on)
+  A = room('tech', 14, 10, tileTex('#eef2ff', '#e0e7ff', 7, 5), '#eef2ff'); A.label = 'Byte Buy'; A.loot = {};
+  { counter(A, 3.5, -2.4, 4.5, 1, '#4338ca', '#c7d2fe'); const wall = grp(A.g, -3, 0, -4.7); box(5.2, 2.4, 0.2, '#1e1b4b', wall, 0, 1.6, 0);
+    const scr = ['#38bdf8', '#f472b6', '#facc15', '#22c55e', '#a78bfa', '#fb923c']; for (let i = 0; i < 6; i++) { const x = -1.8 + (i % 3) * 1.8, y = i < 3 ? 2.2 : 1.2; box(1.5, 0.8, 0.06, '#0f172a', wall, x, y, 0.14); box(1.36, 0.66, 0.02, M(scr[i], { emissive: MD.shade(scr[i], -0.5) }), wall, x, y, 0.18); }
+    box(5.2, 0.9, 0.9, '#c7d2fe', A.g, -3, 0.45, -3.4); const gad = dyn(grp(A.g, -3, 0, -3.4)); [['#111827', -1.8], ['#9ca3af', -0.6], ['#f8fafc', 0.6], ['#111827', 1.8]].forEach((q, i) => { box(i % 2 ? 0.7 : 0.35, i % 2 ? 0.05 : 0.6, i % 2 ? 0.5 : 0.05, q[0], gad, q[1], 1.0 + (i % 2 ? 0 : 0.3), 0); }); A.loot.tech = gad; obsB(A, -5.7, -0.3, -5, -2.9); }
+  { const tc = MD.avatar({ skin: GL.SKINS[2], hair: 'short', hc: '#111827', top: 'tee', tc: '#4338ca', bc: '#1f2937', gl: 'round' }); tc.g.position.set(3.5, 0, -3.5); A.g.add(tc.g); }
+  hot(A, { id: 'buy', kind: 'shop', shop: 'tech', x: 3.5, z: -1.2, reach: 1.9, name: 'Tech Counter', label: 'SHOP' });
+  hot(A, { id: 'h_tech', kind: 'heist', heist: 'tech', x: -3, z: -2.1, reach: 1.9, name: 'Gadget Wall', label: 'LOOK' });
+  label(A, '\uD83D\uDCBB BYTE BUY TECH', 0, 3.0, -4.6, 'rgba(67,56,202,.92)');
+  // Honest Hank's Auto Care (the helpful mechanic)
+  A = room('hanks', 14, 10, tileTex('#e0f2fe', '#bae6fd', 7, 5), '#eff6ff'); A.label = 'Honest Hank\u2019s';
+  { const lift = grp(A.g, 3.2, 0, -2.4); box(0.35, 1.1, 0.35, '#facc15', lift, -1.1, 0.55, 0); box(0.35, 1.1, 0.35, '#facc15', lift, 1.1, 0.55, 0); box(2.6, 0.14, 4, '#ca8a04', lift, 0, 1.1, 0); const car = MD.car('sedan', '#22c55e'); car.g.position.y = 1.17; lift.add(car.g); obsB(A, 1.8, 4.6, -4.6, -0.3); }
+  counter(A, -3.5, -2.6, 4, 1, '#1d4ed8'); shelfUnit(A, -3.5, -4.4, 4, 0, ['#ef4444', '#facc15', '#22c55e', '#38bdf8']);
+  { const hk = MD.avatar({ skin: GL.SKINS[3], hair: 'short', hc: '#9ca3af', top: 'overalls', tc: '#1d4ed8', bc: '#1e3a8a', hat: 'cap', hatc: '#1d4ed8', gl: 'round' }); hk.g.position.set(-3.5, 0, -3.6); A.g.add(hk.g); }
+  { const tb = signPlane('TIP: Slow down = fewer bonks!', 3.2, 0.7, '#0f766e'); tb.position.set(-3.5, 2.6, -4.88); A.g.add(tb); }
+  hot(A, { id: 'mech', kind: 'mech', shop: 'hank', x: -3.5, z: -1.4, reach: 1.9, name: 'Hank (helpful mechanic)', label: 'REPAIR' });
+  label(A, '\uD83D\uDEE0\uFE0F HONEST HANK\u2019S AUTO CARE', 0, 3.0, -4.6, 'rgba(29,78,216,.92)');
+  // Sketchy Steve's Fix-It-Quik (the not-so-helpful mechanic)
+  A = room('steves', 14, 10, woodTex('#a8a29e', '#8b8580', 5, 4), '#fef3c7'); A.label = 'Sketchy Steve\u2019s';
+  { const car = MD.car('compact', '#a16207'); car.g.position.set(3.4, 0.35, -2.4); car.g.rotation.z = 0.08; A.g.add(car.g); [-1, 1].forEach((s) => box(0.5, 0.35, 0.5, '#78716c', A.g, 3.4 + s * 0.7, 0.17, -2.4 - 1.2)); [-1, 1].forEach((s) => box(0.5, 0.35, 0.5, '#78716c', A.g, 3.4 + s * 0.7, 0.17, -2.4 + 1.2)); obsB(A, 2.3, 4.5, -4.4, -0.4);
+    for (let i = 0; i < 4; i++) cyl(0.4, 0.26, '#1f2937', A.g, -6, 0.13 + i * 0.27, 3.4 - (i % 2) * 0.1); obsC(A, -6, 3.4, 0.45); box(0.6, 0.6, 0.6, '#9ca3af', A.g, 5.8, 0.3, 3.6); }
+  counter(A, -3, -2.6, 4, 1, '#78350f', '#d6d3d1');
+  { const st = MD.avatar({ skin: GL.SKINS[1], hair: 'long', hc: '#a16207', top: 'tee', tc: '#f97316', bc: '#1f2937', hat: 'cap', hatc: '#78350f', gl: 'shades' }); st.g.position.set(-3, 0, -3.6); A.g.add(st.g); }
+  { const tb = signPlane('NO REFUNDS \u00b7 NO PROBLEMS', 3.4, 0.7, '#b45309'); tb.position.set(-3, 2.6, -4.88); A.g.add(tb); }
+  hot(A, { id: 'mech', kind: 'mech', shop: 'steve', x: -3, z: -1.4, reach: 1.9, name: 'Steve (not-so-helpful mechanic)', label: 'REPAIR' });
+  label(A, '\uD83E\uDE9B SKETCHY STEVE\u2019S FIX-IT-QUIK', 0, 3.0, -4.6, 'rgba(120,53,15,.92)');
   // bank vault + hospital billing / ER (extras)
   { const B = W.areas.bank; A = B; const vd = dyn(grp(B.g, 4.5, 1.6, -4.7)); B.loot = { vault: vd }; for (let i = 0; i < 3; i++) box(0.5, 0.2, 0.25, M('#facc15', { emissive: '#a16207' }), vd, -0.6 + i * 0.6, -1.3, 0.2);
     hot(B, { id: 'h_vault', kind: 'heist', heist: 'vault', x: 5.6, z: -3.7, reach: 1.7, name: 'Bank Vault', label: 'LOOK' }); }
@@ -675,7 +706,7 @@ function buildInteriors() {
   Object.keys(NH).forEach((id) => { const h = NH[id]; A = room('nh_' + id, 14, 10, W.floorTex(h.floor, 14, 10), h.wall); A.label = NPC_LOTS[Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id)].name + '\u2019s House'; A.npcHome = id; h.items.forEach((q) => furnAt(A, q[0], q[1], q[2], q[3], 1, q[0] !== 'rug')); });
   { const A2 = W.areas.nh_grumble; const ks = signPlane('NO VISITORS (mostly)', 2.6, 0.5, '#dc2626'); ks.position.set(-1, 2.4, -4.83); A2.g.add(ks); }
   { const A2 = W.areas.nh_gladys; const bn = grp(A2.g, 5.5, 0, 2); box(0.12, 0.12, 0.3, '#111827', bn, -0.1, 1.5, 0); box(0.12, 0.12, 0.3, '#111827', bn, 0.1, 1.5, 0); cyl(0.04, 1.4, '#78350f', bn, 0, 0.7, 0); }
-  ['grocery', 'boutique', 'cafe', 'bank', 'cityhall', 'furniture', 'petstore', 'hospital', 'school', 'garage', 'dealer', 'fire', 'police', 'museum', 'jewelry', 'shelter', 'clinic', 'pawn', 'nh_gladys', 'nh_rosa', 'nh_grumble', 'nh_joe'].forEach((id) => { const a = W.areas[id]; const b = W.bld(id); a.exitTo = b ? b.out : null; if (id.indexOf('nh_') === 0) { const li = +Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id.slice(3)); a.exitTo = [GL.LOTS[li] - 1.5, 58.4]; } bake(a.g); });
+  ['grocery', 'boutique', 'cafe', 'bank', 'cityhall', 'furniture', 'petstore', 'hospital', 'school', 'garage', 'dealer', 'fire', 'police', 'museum', 'jewelry', 'shelter', 'clinic', 'pawn', 'tech', 'hanks', 'steves', 'nh_gladys', 'nh_rosa', 'nh_grumble', 'nh_joe'].forEach((id) => { const a = W.areas[id]; const b = W.bld(id); a.exitTo = b ? b.out : null; if (id.indexOf('nh_') === 0) { const li = +Object.keys(NPC_LOTS).find((k) => NPC_LOTS[k].npc === id.slice(3)); a.exitTo = [GL.LOTS[li] - 1.5, 58.4]; } bake(a.g); });
 }
 
 /* ---------------- player homes ---------------- */
@@ -803,7 +834,9 @@ W.updateCamera = function (x, z, dt, snap) {
   const pf = c.aspect < 0.8 ? 1.22 : 1, zm = A.outdoor ? W.camZoom : 1, h = A.cam.h * pf * zm, d = A.cam.d * pf * zm;
   let tx = x + (A.outdoor ? W.camAhead[0] : 0), tz = z + (A.outdoor ? W.camAhead[1] : 0);
   if (A.w) { tx = GL.clamp(x, -Math.max(0, A.w / 2 - 4), Math.max(0, A.w / 2 - 4)); tz = Math.min(z, A.d / 2 - 2.5); }
-  const want = new T.Vector3(tx, h, tz + d), look = new T.Vector3(tx, 0.6, tz - 0.5);
+  const uz = W.camUZ || 1, tl = W.camTilt || 1; let yw = W.camYaw || 0; if (!A.outdoor) yw = GL.clamp(yw, -0.5, 0.5);
+  const hh = h * uz * tl, dd = d * uz / Math.sqrt(tl), sy = Math.sin(yw), cy = Math.cos(yw);
+  const want = new T.Vector3(tx + sy * dd, hh, tz + cy * dd), look = new T.Vector3(tx - sy * 0.5, 0.6, tz - cy * 0.5);
   const k = snap ? 1 : 1 - Math.exp(-dt * 5);
   W.camPos.lerp(want, k); W.camLook.lerp(look, k); c.position.copy(W.camPos); c.lookAt(W.camLook);
 };

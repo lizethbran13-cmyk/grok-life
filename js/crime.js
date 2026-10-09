@@ -255,6 +255,7 @@ G.hooks.kinds.hide = function (h) {
   W.fx('sparkle', h.hx, 1.2, h.hz, 1, 0.6); Snd.fx('scrub');
   G.toast(CR.myWanted() ? '\uD83C\uDF3F Shhh\u2026 you\u2019re hiding. Wait for the cops to give up!' : '\uD83C\uDF3F You hide in the bush. Shhh! (Great for hide & seek.)');
 };
+CR.vehicles = () => Object.keys(copView).filter((id) => copView[id].car).map((id) => ({ key: 'cop' + id, o: copView[id].car }));
 CR._st = () => ({ heist, jail, cops: cops.length, view: Object.keys(copView).length });
 G.hooks.reset.push(() => { cops = []; render([], 0, true); heist = null; jail = null; ovlClose(); });
 })();

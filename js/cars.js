@@ -15,7 +15,7 @@ C.respawn = function (keepPos) { const s = sv(), old = my; const c = activeCar()
 C.spawnAt = function (x, z, yaw) { const s = sv(); s.carPos = [x, z, yaw]; C.respawn(); G.persist(); };
 C.parkHome = function () { const s = sv(); if (my && my.drive) return; s.carPos = null; C.respawn(); };
 C.homesChanged = function () { if (!sv().carPos && !(my && my.drive)) C.respawn(); };
-C.bring = function () { if (!activeCar()) { G.toast('You don\u2019t have a car yet!'); return; } if (GS.me.area !== 'town') { G.toast('Step outside first, then call your car.'); return; } const yaw = GS.me.yaw; let p = W.freeNear(W.areas.town, GS.me.x + Math.sin(yaw) * 3, GS.me.z + Math.cos(yaw) * 3, 1.3); C.spawnAt(p[0], p[1], yaw); Snd.fx('honk'); G.toast('\uD83D\uDE97 Your car is here!'); };
+C.bring = function () { if (!activeCar()) { G.toast('You don\u2019t have a car yet!'); return; } if (G.carBlock && G.carBlock('bring')) return; if (GS.me.area !== 'town') { G.toast('Step outside first, then call your car.'); return; } const yaw = GS.me.yaw; let p = W.freeNear(W.areas.town, GS.me.x + Math.sin(yaw) * 3, GS.me.z + Math.cos(yaw) * 3, 1.3); C.spawnAt(p[0], p[1], yaw); Snd.fx('honk'); G.toast('\uD83D\uDE97 Your car is here!'); };
 C.driving = () => !!((my && my.drive) || (work && work.drive));
 function cur() { return work && work.drive ? work : my && my.drive ? my : null; }
 C.cur = cur;
@@ -28,6 +28,9 @@ C.workObj = () => work;
 C.makeCar = (type, col, x, z, yaw) => mk(type, col, x, z, yaw);
 C.placeCar = (o) => place(o);
 C.killCar = (o) => kill(o);
+C.myCar = () => my;
+C.remoteCars = () => remote;
+C.activeCar = activeCar;
 function seatPos(o, i) { const s = o.m.seats[Math.min(i, o.m.seats.length - 1)], c = Math.cos(o.yaw), sn = Math.sin(o.yaw); return { x: o.x + s[0] * c + s[2] * sn, z: o.z - s[0] * sn + s[2] * c, y: s[1] - 0.45, yaw: o.yaw }; }
 C.mySeat = function () { const o = cur(); if (o) return seatPos(o, 0); if (GS.me.ride) { const r = remote[GS.me.ride]; if (r) { const others = Object.keys(GS.pos).filter((k) => GS.pos[k].rd === GS.me.ride && k < GS.pid).length; return seatPos(r, 1 + others); } } return null; };
 C.remoteSeat = function (pid, pos) { if (pos.c && pos.c[5]) { const r = remote[pid]; if (r) return seatPos(r, 0); } if (pos.rd) { const r = pos.rd === GS.pid ? cur() : remote[pos.rd]; if (r) { const n = Object.keys(GS.pos).filter((k) => GS.pos[k].rd === pos.rd && k < pid).length + (pos.rd !== GS.pid && GS.me.ride === pos.rd && GS.pid < pid ? 1 : 0); return seatPos(r, 1 + n); } } return null; };
@@ -44,7 +47,7 @@ C.actTarget = function () {
   return null;
 };
 C.act = function (t) {
-  if (t.kind === 'drive') { my.drive = true; my.v = 0; GS.goal = null; Snd.fx('engine'); G.toast('\uD83D\uDE97 Drag the stick where you want to go!'); }
+  if (t.kind === 'drive') { if (G.carBlock && G.carBlock('drive')) return; my.drive = true; my.v = 0; GS.goal = null; Snd.fx('engine'); G.toast('\uD83D\uDE97 Drag the stick where you want to go!'); }
   else if (t.kind === 'exit') { if (work) { Snd.fx('siren'); return; } const o = my; o.drive = false; o.v = 0; const c = Math.cos(o.yaw), s = Math.sin(o.yaw); const f = W.freeNear(W.areas.town, o.x + c * 1.8, o.z - s * 1.8, 0.4); GS.me.x = f[0]; GS.me.z = f[1]; sv().carPos = [+o.x.toFixed(2), +o.z.toFixed(2), +o.yaw.toFixed(2)]; G.persist(); Snd.fx('door'); }
   else if (t.kind === 'ride') { GS.me.ride = t.pid; GS.goal = null; Snd.fx('door'); G.toast('\uD83D\uDE97 Riding with ' + G.playerInfo(t.pid).name + '!'); G.need('s', 5); }
   else if (t.kind === 'unride') unride();
@@ -54,8 +57,8 @@ function unride() { const r = remote[GS.me.ride]; GS.me.ride = null; if (r) { co
 function drive(o, dt) {
   const sp = spec(o.type), inp = G.input(); let mag = inp[2], thr = 0, st = 0;
   const kb = G.keys, useKb = kb.KeyW || kb.KeyS || kb.ArrowUp || kb.ArrowDown;
-  if (GS.panel || GS.talk) mag = 0;
-  if (useKb) { thr = (kb.KeyW || kb.ArrowUp ? 1 : 0) - (kb.KeyS || kb.ArrowDown ? 1 : 0); st = (kb.KeyA || kb.ArrowLeft ? 1 : 0) - (kb.KeyD || kb.ArrowRight ? 1 : 0); if (o.v < -0.5) st = -st; }
+  if (GS.panel || GS.talk || (G.carDead && G.carDead(o))) mag = 0;
+  if (useKb && !(G.carDead && G.carDead(o))) { thr = (kb.KeyW || kb.ArrowUp ? 1 : 0) - (kb.KeyS || kb.ArrowDown ? 1 : 0); st = (kb.KeyA || kb.ArrowLeft ? 1 : 0) - (kb.KeyD || kb.ArrowRight ? 1 : 0); if (o.v < -0.5) st = -st; }
   else if (mag > 0.15) {
     const want = Math.atan2(inp[0], inp[1]), d = ang(want - o.yaw);
     if (Math.abs(d) < 2.2 || o.v > 2) { thr = mag; st = clamp(d * 1.8, -1, 1); if (Math.abs(d) > 1.2) thr *= 0.55; }
@@ -66,7 +69,7 @@ function drive(o, dt) {
   o.yaw += st * 2.0 * clamp(o.v / 5, -1, 1) * dt;
   const fx = Math.sin(o.yaw), fz = Math.cos(o.yaw), nx = o.x + fx * o.v * dt, nz = o.z + fz * o.v * dt;
   if (blocked(o, nx, nz)) { const hv = Math.abs(o.v); if (hv > 4) Snd.fx('bump'); o.v = -o.v * 0.25; if (hv > 4 && G.onCrash) G.onCrash(hv, !!o.work); }
-  else { const d = Math.hypot(nx - o.x, nz - o.z); o.x = nx; o.z = nz; sv().stats.drive += d; }
+  else { const d = Math.hypot(nx - o.x, nz - o.z); o.x = nx; o.z = nz; sv().stats.drive += d; if (G.onDriven) G.onDriven(o, d); }
   o.m.wheels.forEach((w) => { w.children[0].rotation.x += o.v * dt / o.m.wr; });
   GS.me.x = o.x; GS.me.z = o.z; GS.me.yaw = o.yaw;
 }
@@ -84,9 +87,9 @@ function trafficInit() {
 }
 function trafficTick(dt) {
   if (!traffic.length) trafficInit();
-  const blockers = []; const me = cur(); if (me) blockers.push([me.x, me.z]); if (GS.me.area === 'town' && !me) blockers.push([GS.me.x, GS.me.z]);
+  const blockers = []; const me = cur(); if (me) blockers.push([me.x, me.z]); if (GS.me.area === 'town' && !me && !GS.me.ride && !(G.meHidden && G.meHidden())) blockers.push([GS.me.x, GS.me.z, null, 1]);
   for (const k in remote) blockers.push([remote[k].x, remote[k].z]);
-  for (const k in GS.pos) { const p = GS.pos[k]; if (p.a === 'town') blockers.push([p.x, p.z]); }
+  for (const k in GS.pos) { const p = GS.pos[k]; if (p.a === 'town' && !(p.c && p.c[5]) && !p.rd) blockers.push([p.x, p.z, null, 1]); }
   if (GL.NPC) GL.NPC.list.forEach((n) => { if (n.inTown) blockers.push([n.x, n.z]); });
   if (G.extraBlockers) G.extraBlockers(blockers);
   traffic.forEach((o) => blockers.push([o.x, o.z, o]));
@@ -94,14 +97,15 @@ function trafficTick(dt) {
     const b = RING[(o.seg + 1) % 4], dx = b[0] - o.x, dz = b[1] - o.z, d = Math.hypot(dx, dz);
     if (d < 0.5) { o.seg = (o.seg + 1) % 4; return; }
     const fx = dx / d, fz = dz / d; o.yaw += ang(Math.atan2(fx, fz) - o.yaw) * Math.min(1, dt * 6);
-    let want = 9;
+    let want = o.phone > 0 ? (o.hurry ? 10.5 : 8.5) : 9;
     // stop line before each intersection along the ring (corners and middles)
     const along = Math.abs(fx) > 0.5 ? o.x : o.z, dir = Math.abs(fx) > 0.5 ? Math.sign(fx) : Math.sign(fz);
     for (const c of [-48, 0, 48]) { const gap = (c - along) * dir; if (gap > 6.5 && gap < 9.5 && o.lastStop !== c + ',' + o.seg) { want = 0; o.wait += dt; if (o.wait > 0.9) { o.lastStop = c + ',' + o.seg; o.wait = 0; } } }
-    for (const q of blockers) { if (q[2] === o) continue; const bx = q[0] - o.x, bz = q[1] - o.z, ahead = bx * fx + bz * fz, side = Math.abs(bx * fz - bz * fx); if (ahead > 0 && ahead < 7.5 && side < 2.2) { want = 0; o.stuckT = (o.stuckT || 0) + dt; if (o.stuckT > 6 && q[2]) want = 4; break; } }
+    for (const q of blockers) { if (q[2] === o) continue; if (q[3] && o.phone > 0) continue; const bx = q[0] - o.x, bz = q[1] - o.z, ahead = bx * fx + bz * fz, side = Math.abs(bx * fz - bz * fx); if (ahead > 0 && ahead < (q[3] ? 6 : 7.5) && side < (q[3] ? 1.6 : 2.2)) { want = 0; o.stuckT = (o.stuckT || 0) + dt; if (o.stuckT > 6 && q[2]) want = 4; break; } }
     if (want > 0) o.stuckT = 0;
     o.v += clamp(want - o.v, -14 * dt, 5 * dt); o.x += Math.sin(o.yaw) * o.v * dt; o.z += Math.cos(o.yaw) * o.v * dt;
     place(o); o.m.wheels.forEach((w) => { w.children[0].rotation.x += o.v * dt / o.m.wr; });
+    if (G.trafficHook) G.trafficHook(o, dt);
   });
 }
 C.traffic = () => traffic;

@@ -24,6 +24,7 @@ function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { co
 K.request = function (cid) {
   const s = sv(), C = GL.CAREERS[cid]; if (!C) return;
   if (GS.work) return;
+  if (s.job !== cid && cid === 'animalcontrol' && GL.Strays && GL.Strays.offer) { GL.Strays.offer(); return; }
   if (s.job !== cid) { G.toast(C.icon + ' This is where ' + C.name + 's work. Get the job at City Hall!'); if (s.tut === 2) G.guide = null; return; }
   if (GL.Cars && GL.Cars.driving()) return;
   if (G.injBlock && G.injBlock()) return;
