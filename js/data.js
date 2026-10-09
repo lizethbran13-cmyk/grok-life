@@ -152,6 +152,8 @@ GL.ITEMS = {
   bandage: { name: 'Cartoon Bandage', icon: '\uD83E\uDE79', price: 8, where: 'pharm', cat: 'med', hp: 15, desc: 'For bumps and scrapes. +15 health.' },
   icepack: { name: 'Ice Pack', icon: '\uD83E\uDDCA', price: 12, where: 'pharm', cat: 'med', hp: 22, desc: 'Cools a bonk. +22 health.' },
   ointment: { name: 'Owie Ointment', icon: '\uD83E\uDDF4', price: 18, where: 'pharm', cat: 'med', hp: 35, desc: 'Super soothing. +35 health.' },
+  umbrella: { name: 'Umbrella', icon: '\u2602\uFE0F', price: 15, where: 'grocery', cat: 'gear', desc: 'Keeps you dry in rain + blocks some hail.' },
+  flashlight: { name: 'Flashlight', icon: '\uD83D\uDD26', price: 12, where: 'grocery', cat: 'gear', desc: 'Lights your way in a power outage.' },
   smartphone: { name: 'Smartphone X', icon: '\uD83D\uDCF1', price: 120, where: 'tech', cat: 'tech', f: 10, s: 6, desc: 'Watch funny cat videos. +fun' },
   laptop: { name: 'Laptop', icon: '\uD83D\uDCBB', price: 280, where: 'tech', cat: 'tech', f: 14, desc: 'Play browser games. +fun' },
   console: { name: 'Game Console', icon: '\uD83C\uDFAE', price: 240, where: 'tech', cat: 'tech', f: 22, e: -4, desc: 'Big fun! (a little tiring)' },

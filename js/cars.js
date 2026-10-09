@@ -64,7 +64,9 @@ function drive(o, dt) {
     if (Math.abs(d) < 2.2 || o.v > 2) { thr = mag; st = clamp(d * 1.8, -1, 1); if (Math.abs(d) > 1.2) thr *= 0.55; }
     else { thr = -mag * 0.7; st = -clamp(ang(want - o.yaw - Math.PI) * 1.8, -1, 1); }
   }
-  if (thr > 0) o.v += (o.v < 0 ? 18 : sp.acc) * thr * dt; else if (thr < 0) o.v += (o.v > 0 ? 18 : 6) * thr * dt; else o.v -= Math.sign(o.v) * Math.min(Math.abs(o.v), 12 * dt);
+  const grip = G.carGrip ? G.carGrip(o) : 1; // wet / icy roads: slower braking + a little slide
+  if (thr > 0) o.v += (o.v < 0 ? 18 * grip : sp.acc) * thr * dt; else if (thr < 0) o.v += (o.v > 0 ? 18 * grip : 6) * thr * dt; else o.v -= Math.sign(o.v) * Math.min(Math.abs(o.v), 12 * grip * dt);
+  if (grip < 1 && Math.abs(o.v) > 7 && Math.abs(st) > 0.3) o.yaw += (Math.random() - 0.5) * (1 - grip) * 1.6 * dt;
   o.v = clamp(o.v, -6, sp.top);
   o.yaw += st * 2.0 * clamp(o.v / 5, -1, 1) * dt;
   const fx = Math.sin(o.yaw), fz = Math.cos(o.yaw), nx = o.x + fx * o.v * dt, nz = o.z + fz * o.v * dt;

@@ -89,6 +89,7 @@ function finish(forceStars) {
   if (st.note) extraNote = st.note; else extraNote = '';
   let pay = stars ? GL.payFor(cid, j.lv, stars) : 10, extra = []; if (extraNote) extra.push(extraNote);
   const mates = friendWorking(), team = mates.length > 0; let bonus = 0; if (team && stars) { const b = Math.round(pay * 0.25); bonus = b; pay += b; extra.push('\uD83E\uDD1D Teamwork +' + money(b)); }
+  if (stars && G.emergencyBonus && G.emergencyBonus(cid)) { const b = Math.round(pay * 0.5); pay += b; extra.push('\uD83D\uDEA8 Emergency work bonus +' + money(b)); }
   if (s.workDay !== G.day() && stars) { s.workDay = G.day(); pay += 50; extra.push('\u2600\uFE0F First shift today +$50'); }
   G.addMoney(pay, 'earn'); j.stars += stars; j.shifts = (j.shifts || 0) + 1; s.stats.shifts++; if (stars === 3) s.stats.perfect++;
   G.need('e', -14); G.need('h', -8); G.need('f', stars ? 6 : -4);

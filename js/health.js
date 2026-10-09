@@ -299,7 +299,7 @@ HL.billing = function () {
   open('billing', h);
 };
 G.hooks.kinds.billing = () => HL.billing();
-G.hooks.newDay.push(() => { const s = sv(), owe = s.bills.reduce((m, b) => m + b.amt, 0); if (owe > 0) setTimeout(() => G.toast('\uD83D\uDCEC Reminder: you owe ' + money(owe) + ' in medical bills (phone \u2192 \uD83E\uDE7A Health).'), 2500); });
+G.hooks.newDay.push(() => { const s = sv(), owe = s.bills.reduce((m, b) => m + b.amt, 0); if (owe > 0) setTimeout(() => G.toast('\uD83D\uDCEC Reminder: you owe ' + money(owe) + ' in bills (phone \u2192 \uD83E\uDE7A Health to pay).'), 2500); });
 G.hooks.reset.push(() => { if (amb) { GL.Cars.killCar(amb.car); amb = null; } ovlClose(); });
 // resuming a save while badly hurt: show the "call ambulance" prompt again once in town
 let downNag = 0; G.hooks.tick.push((dt) => { if (!HL.down() || amb || GS.panel || GS.ovl || !document.getElementById('phone').classList.contains('hidden')) { downNag = 0; return; } downNag += dt; if (downNag > 1.5) { downNag = 0; HL.downPanel(); } });

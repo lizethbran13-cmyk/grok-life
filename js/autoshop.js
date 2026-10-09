@@ -43,6 +43,8 @@ function carHit(v) {
   if (cond(c) <= 0) breakdown('crash'); else G.persist();
 }
 AS.crash = carHit;
+// weather damage (hail dents, hurricane, flood stalls) never fully wrecks the car: it stops at `floor`%
+AS.damage = function (d, floor) { const c = car(); if (!c || c.broken) return false; const v = cond(c); if (v <= (floor || 0)) return false; setCond(c, Math.max(floor || 0, v - d)); G.persist(); return true; };
 // wear + random breakdowns (from cars.js drive)
 G.onDriven = function (o, d) {
   const c = car(); if (!c || o !== myCarObj() || c.broken) return;

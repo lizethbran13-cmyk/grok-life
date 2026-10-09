@@ -368,7 +368,7 @@ function interact(h) {
     case 'door': {
       if (h.to === 'arcade') { UI.arcade(); return; }
       if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to) && save.crime.on && (h.to === 'museum' || h.to === 'jewelry' || h.to === 'bank' || h.to === 'tech')) { G.toast('\uD83E\uDD77 You tiptoe in through the back window\u2026'); travel(h.to); return; }
-      if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to)) { const b = W.bld(h.to); G.toast(b.name + ' is closed right now. Open ' + G.timeStr(b.open[0] * 60) + ' \u2013 ' + G.timeStr(b.open[1] * 60) + '.', true); Snd.fx('no'); return; }
+      if (!W.isOpen(h.to, G.clock()) && !workerOf(h.to)) { const b = W.bld(h.to); const why = G.closedWhy && G.closedWhy(h.to); if (why) { G.toast(why, true); Snd.fx('no'); return; } G.toast(b.name + ' is closed right now. Open ' + G.timeStr(b.open[0] * 60) + ' \u2013 ' + G.timeStr(b.open[1] * 60) + '.', true); Snd.fx('no'); return; }
       travel(h.to); return;
     }
     case 'exit': G.exitArea(); return;
@@ -445,7 +445,7 @@ function tickAct(dt) {
 /* ======================================================================
    Panels + toasts
    ====================================================================== */
-function openPanel(name, html) { GS.panel = name; $('pnlCard').innerHTML = html; $('pnl').classList.remove('hidden'); $('pnlCard').scrollTop = 0; GS.joyReset && GS.joyReset(); }
+function openPanel(name, html) { const nf = $('notif'); if (nf && nf.classList.contains('on')) { nf.classList.remove('on'); document.body.classList.remove('hasNotif'); } GS.panel = name; $('pnlCard').innerHTML = html; $('pnl').classList.remove('hidden'); $('pnlCard').scrollTop = 0; GS.joyReset && GS.joyReset(); }
 function closePanel() { const was = GS.panel; GS.panel = null; $('pnl').classList.add('hidden'); if (was && G.onPanelClose) G.onPanelClose(was); }
 function head(title) { return '<div class="pnlHead"><h2>' + title + '</h2><button class="xbtn" data-a="close" aria-label="Close">\u2715</button></div>'; }
 G.openPanel = openPanel; G.closePanel = closePanel; G.head = head;
@@ -699,7 +699,7 @@ let promptKey = '', hudT = 0;
 function updateHUD(dt) {
   GS.moneyFlash = Math.max(0, (GS.moneyFlash || 0) - dt * 2);
   $('moneyN').textContent = GL.money(save.money); $('moneyPill').style.transform = GS.moneyFlash > 0 ? 'scale(' + (1 + GS.moneyFlash * 0.15) + ')' : '';
-  $('clockN').textContent = (W.isNight(G.clock()) ? '\uD83C\uDF19 ' : '\u2600\uFE0F ') + G.timeStr() + ' \u00b7 Day ' + G.day();
+  $('clockN').textContent = ((G.wxIcon && G.wxIcon()) || (W.isNight(G.clock()) ? '\uD83C\uDF19' : '\u2600\uFE0F')) + ' ' + G.timeStr() + ' \u00b7 Day ' + G.day();
   const t = actTarget(), act = $('bAct'), pr = $('prompt');
   const label = t ? t.label : (GL.Cars && GL.Cars.driving() ? 'EXIT' : '\u2022');
   if ($('actT').textContent !== label) $('actT').textContent = label;

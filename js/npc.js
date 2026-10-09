@@ -50,6 +50,7 @@ N.init = function () {
 // where should n be at minute m?  returns {area, x, z} or {town:true}
 function plan(n, m) {
   const h = m / 60, d = n.def;
+  if (G.stormy && G.stormy()) return { area: d.work ? d.work[0] : d.home || 'home' }; // storms + disasters: everyone heads indoors
   if (d.work && h >= 8 && h < 18) return { area: d.work[0] };
   if (h >= 7 && h < 21.5) return { town: 1 };
   return { area: d.home || 'home' };
@@ -103,7 +104,7 @@ N.tick = function (dt) {
           const b = p.area.startsWith('nh_') ? W.lots.find((L) => L.npc === n.def.id) : p.area === 'home' ? null : W.bld(p.area);
           const out = b ? (b.out || [b.x - 1.5, 57]) : null;
           if (!out || Math.hypot(out[0] - n.x, out[1] - n.z) < 1.2 || !n.def.work && p.area === 'home') setArea(n, p.area);
-          else { if (!n.path || !n.path.goal) { n.path = W.navPath(n.x, n.z, out[0], out[1]) || [[out[0], out[1]]]; n.path.goal = 1; } if (n.path.length) { const w = n.path[0]; if (walk(n, dt, w[0], w[1], 2.6)) n.path.shift(); } else setArea(n, p.area); }
+          else { if (!n.path || !n.path.goal) { n.path = W.navPath(n.x, n.z, out[0], out[1]) || [[out[0], out[1]]]; n.path.goal = 1; } if (n.path.length) { const w = n.path[0]; if (walk(n, dt, w[0], w[1], G.stormy && G.stormy() ? 4.4 : 2.6)) n.path.shift(); } else setArea(n, p.area); }
         } else setArea(n, p.area);
       } else n.sp = 0;
     } else { n.sp = 0; n.yaw += ang(Math.atan2(GS.me.x - n.x, GS.me.z - n.z) - n.yaw) * Math.min(1, dt * 6); }

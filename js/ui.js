@@ -73,7 +73,7 @@ function closeCreator() { if (CR) W.scene.remove(CR.prev.g); CR = null; GS.creat
 UI.boutique = () => UI.creator('boutique');
 
 /* ---------------- phone ---------------- */
-const APPS = [['map', '\uD83D\uDDFA\uFE0F', 'Map'], ['career', '\uD83D\uDCBC', 'Career'], ['house', '\uD83C\uDFE0', 'House'], ['cars', '\uD83D\uDE97', 'Cars'], ['pets', '\uD83D\uDC3E', 'Pets'], ['friends', '\uD83D\uDC9E', 'Friends'], ['goals', '\uD83C\uDFC6', 'Goals'], ['bag', '\uD83C\uDF92', 'Bag'], ['bank', '\uD83C\uDFE6', 'Bank'], ['health', '\uD83E\uDE7A', 'Health'], ['animal', '\uD83D\uDC3E', 'Animal Ctrl'], ['tow', '\uD83D\uDEFB', 'Tow'], ['settings', '\u2699\uFE0F', 'Settings']];
+const APPS = [['map', '\uD83D\uDDFA\uFE0F', 'Map'], ['career', '\uD83D\uDCBC', 'Career'], ['house', '\uD83C\uDFE0', 'House'], ['cars', '\uD83D\uDE97', 'Cars'], ['pets', '\uD83D\uDC3E', 'Pets'], ['friends', '\uD83D\uDC9E', 'Friends'], ['goals', '\uD83C\uDFC6', 'Goals'], ['bag', '\uD83C\uDF92', 'Bag'], ['bank', '\uD83C\uDFE6', 'Bank'], ['health', '\uD83E\uDE7A', 'Health'], ['animal', '\uD83D\uDC3E', 'Animal Ctrl'], ['tow', '\uD83D\uDEFB', 'Tow'], ['weather', '\uD83C\uDF26\uFE0F', 'Weather'], ['settings', '\u2699\uFE0F', 'Settings']];
 UI.phone = function () {
   const s = sv(); const p = $('phone');
   p.innerHTML = '<div class="phBox"><div class="phTop"><span>' + G.timeStr() + '</span><b>' + money(s.money) + '</b><button class="xbtn" data-a="phClose">\u2715</button></div><div class="apps">' + APPS.map((a) => '<button class="app' + (G.badges && G.badges[a[0]] ? ' dot' : '') + '" data-a="app" data-v="' + a[0] + '"><i>' + a[1] + '</i><span>' + a[2] + '</span></button>').join('') + '</div><p class="sub small">' + (G.online() && GS.room ? 'Room ' + GS.room.code + ' \u00b7 ' + GS.S.players.length + '/3' : 'Playing solo') + '</p></div>';
@@ -135,7 +135,7 @@ UI.app_goals = function () {
 UI.app_bag = () => UI.bag();
 UI.app_bank = () => UI.bank();
 UI.app_settings = function () {
-  const s = sv(); open('settings', head('\u2699\uFE0F Settings') + '<div class="btncol">' + btn('mute', null, G.prof && GL.Snd.isMuted() ? '\uD83D\uDD07 SOUND OFF' : '\uD83D\uDD0A SOUND ON', '') + btn('tutSkip', null, s.tut < 5 ? 'SKIP TUTORIAL' : 'TUTORIAL DONE \u2714', 'alt', s.tut >= 5) + btn('quit', null, 'SAVE & QUIT TO TITLE', 'blue') + btn('resetAsk', null, 'RESET SAVE', 'red') + '</div><p class="sub small">Your game saves automatically on this device.</p>');
+  const s = sv(); open('settings', head('\u2699\uFE0F Settings') + '<div class="btncol">' + btn('mute', null, G.prof && GL.Snd.isMuted() ? '\uD83D\uDD07 SOUND OFF' : '\uD83D\uDD0A SOUND ON', '') + btn('tutSkip', null, s.tut < 5 ? 'SKIP TUTORIAL' : 'TUTORIAL DONE \u2714', 'alt', s.tut >= 5) + (UI.disFreqBtns ? UI.disFreqBtns() : '') + btn('quit', null, 'SAVE & QUIT TO TITLE', 'blue') + btn('resetAsk', null, 'RESET SAVE', 'red') + '</div><p class="sub small">Your game saves automatically on this device.</p>');
 };
 H.mute = () => { G.toggleMute(); UI.app_settings(); };
 H.tutSkip = () => { sv().tut = 5; G.persist(); UI.app_settings(); };
@@ -148,7 +148,7 @@ UI.needs = function () { const s = sv(); open('needs', head(G.moodFace() + ' How
 UI.bag = function (mode) {
   const s = sv(); let h = head('\uD83C\uDF92 Bag') + '<div class="list">'; const ks = Object.keys(s.bag).filter((k) => s.bag[k] > 0);
   if (!ks.length) h += '<p class="sub">Your bag is empty. Buy food at Fresh Mart or the caf\u00e9!</p>';
-  ks.forEach((k) => { const it = GL.ITEMS[k]; h += '<div class="lrow"><b>' + it.icon + ' ' + esc(it.name) + ' \u00d7' + s.bag[k] + '</b><span>' + (it.cat === 'food' ? btn('eat', k, 'EAT', 'small green') : it.cat === 'med' ? btn('useMed', k, 'USE', 'small green') : it.cat === 'tech' ? btn('useTech', k, 'PLAY', 'small green') : it.cat === 'cook' ? '<small>use at a stove</small>' : it.cat === 'pet' || it.cat === 'toy' ? '<small>for pets</small>' : '<small>gift</small>') + '</span></div>'; });
+  ks.forEach((k) => { const it = GL.ITEMS[k]; h += '<div class="lrow"><b>' + it.icon + ' ' + esc(it.name) + ' \u00d7' + s.bag[k] + '</b><span>' + (it.cat === 'food' ? btn('eat', k, 'EAT', 'small green') : it.cat === 'med' ? btn('useMed', k, 'USE', 'small green') : it.cat === 'tech' ? btn('useTech', k, 'PLAY', 'small green') : it.cat === 'gear' ? '<small>carried \u2714</small>' : it.cat === 'cook' ? '<small>use at a stove</small>' : it.cat === 'pet' || it.cat === 'toy' ? '<small>for pets</small>' : '<small>gift</small>') + '</span></div>'; });
   open('bag', h + '</div>'); void mode;
 };
 H.eat = (k) => { const s = sv(), it = GL.ITEMS[k]; if (!s.bag[k]) return; s.bag[k]--; if (it.h) G.need('h', it.h); if (it.e) G.need('e', it.e); if (it.f) G.need('f', it.f); Snd.fx('eat'); W.fx('heart', GS.me.x, 2, GS.me.z, 3, 0.4); G.toast('\uD83D\uDE0B Yum! ' + it.name); G.persist(); UI.bag(); };
