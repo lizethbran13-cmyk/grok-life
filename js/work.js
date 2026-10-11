@@ -33,6 +33,18 @@ K.request = function (cid) {
   if (cid === 'animalcontrol' && GL.Strays) { GL.Strays.startShift(); return; }
   start(cid);
 };
+// Good Life Pack: Ratita Tablet = work from anywhere (80% pay, not Animal Control)
+K.remote = function () {
+  const s = sv(), cid = s.job, C = GL.CAREERS[cid];
+  if (!C) { G.toast('\uD83D\uDCCB Get a job at City Hall first, then you can work from your tablet!', true); return false; }
+  if (GS.work) return false;
+  if (cid === 'animalcontrol') { G.toast('\uD83D\uDC15 Animal Control needs the rescue van. Start your shift at the shelter!', true); return false; }
+  if (GL.Cars && GL.Cars.driving()) { G.toast('Park your car first! No tablets while driving.', true); return false; }
+  if (G.injBlock && G.injBlock()) return false;
+  if (G.jailed && G.jailed()) return false;
+  if (s.needs.e < 12) { G.toast('\uD83D\uDE34 You\u2019re too tired to work. Get some sleep first!', true); return false; }
+  start(cid); if (st) st.remote = true; return true;
+};
 // results screen for shifts played out in the world (Animal Control van)
 K.external = function (cid, stars, score, note) {
   const C = GL.CAREERS[cid]; if (ov) ov.remove();
@@ -88,6 +100,7 @@ function finish(forceStars) {
   const need = st.mode === 'quiz' ? [2, 5, 8] : [5, 12, 20], stars = typeof forceStars === 'number' ? forceStars : st.score >= need[2] ? 3 : st.score >= need[1] ? 2 : st.score >= need[0] ? 1 : 0;
   if (st.note) extraNote = st.note; else extraNote = '';
   let pay = stars ? GL.payFor(cid, j.lv, stars) : 10, extra = []; if (extraNote) extra.push(extraNote);
+  if (st.remote) { pay = Math.round(pay * 0.8); extra.push('\uD83D\uDCF2 Worked from your Ratita Tablet (80% pay)'); }
   const mates = friendWorking(), team = mates.length > 0; let bonus = 0; if (team && stars) { const b = Math.round(pay * 0.25); bonus = b; pay += b; extra.push('\uD83E\uDD1D Teamwork +' + money(b)); }
   if (stars && G.emergencyBonus && G.emergencyBonus(cid)) { const b = Math.round(pay * 0.5); pay += b; extra.push('\uD83D\uDEA8 Emergency work bonus +' + money(b)); }
   if (s.workDay !== G.day() && stars) { s.workDay = G.day(); pay += 50; extra.push('\u2600\uFE0F First shift today +$50'); }

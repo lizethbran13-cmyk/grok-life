@@ -48,7 +48,8 @@ const S_ = () => GS.S || {};
 const host = () => GS.role !== 'client';
 const inTown = () => !!(W.cur && W.cur.id === 'town');
 const onFoot = () => !(GL.Cars && GL.Cars.driving && GL.Cars.driving());
-const has = (id) => !!(sv().bag && sv().bag[id] > 0);
+const shieldOn = () => !!(GL.GLP && GL.GLP.shield && GL.GLP.shield());
+const has = (id) => !!(sv().bag && sv().bag[id] > 0) || (id === 'umbrella' && shieldOn()); // Good Life Pack: the Ratita Bubble Shield works like the best umbrella
 
 /* ---------------- shared state (host decides) ---------------- */
 function pick(prev) {
@@ -338,7 +339,8 @@ G.hooks.tick.push(function (dt) {
   // umbrella in your hand
   const me = GS.av && GS.av[GS.pid];
   if (me && !umb && has('umbrella')) { umb = MD.grp(null); MD.cyl(0.03, 1.3, '#1f2937', umb, 0, 0.65, 0); const top = MD.mesh(MD.G.hemi, '#ec4899', umb, 0, 1.3, 0, 0.85, 0.4, 0.85); void top; umb.position.set(0.32, 1.0, 0.1); }
-  if (umb && me) { if (umb.parent !== me.ch.g) me.ch.g.add(umb); umb.visible = has('umbrella') && (wetK || hail || !!K.snow) && onFoot(); }
+  if (umb && me) { if (umb.parent !== me.ch.g) me.ch.g.add(umb); umb.visible = !!(sv().bag && sv().bag.umbrella > 0) && !shieldOn() && (wetK || hail || !!K.snow) && onFoot(); }
+  WX.cover = !!(wetK || hail || K.snow);
   // flashlight in an outage at night
   if (WX.outage() && W.isNight(G.clock()) && has('flashlight')) { if (!torch) { torch = new T.PointLight('#fff7c2', 1.6, 16, 1.4); W.scene.add(torch); } torch.visible = true; torch.position.set(GS.me.x + Math.sin(GS.me.yaw || 0) * 1.5, 2.2, GS.me.z + Math.cos(GS.me.yaw || 0) * 1.5); }
   else if (torch) torch.visible = false;

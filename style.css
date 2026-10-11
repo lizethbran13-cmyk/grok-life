@@ -436,3 +436,14 @@ body.decorating #camBtns { bottom: auto; top: calc(162px + var(--st)); }
 #decorBar .chip { min-height: 44px; font-size: 15px; }
 #decorBar .dhint { font-size: 11px; color: #e9d5ff; margin-top: 6px; opacity: .85; }
 @media (orientation: landscape) and (max-height: 520px) { #decorBar, body.decorating #decorBar { bottom: calc(6px + var(--sb)); max-height: 52vh; } #bDecor { bottom: calc(112px + var(--sb)); right: calc(122px + var(--sr)); } }
+
+/* Good Life Pack (Ratita Industries) */
+.chip.dlc { border-color: #a78bfa; }
+.glpGrid .item img { width: 72px; height: 72px; object-fit: contain; }
+.glpGrid .item img.tall { width: 60px; height: 84px; object-fit: contain; }
+.item.glpFocus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,.25); }
+.glpBig { display: flex; justify-content: center; margin: 4px 0; }
+.glpBig img { width: 150px; height: 150px; object-fit: contain; }
+.glpBig img.tall { width: 120px; height: 168px; }
+.glpHero { display: flex; justify-content: center; gap: 6px; }
+.glpHero img { width: 84px; height: 84px; object-fit: contain; }

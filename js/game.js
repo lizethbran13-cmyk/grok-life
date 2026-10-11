@@ -131,7 +131,7 @@ function cleanLook(l) {
   if (!l || typeof l !== 'object') return GL.defaultLook();
   const hex = (c, d) => /^#[0-9a-f]{6}$/i.test(c || '') ? c : d; const d = GL.defaultLook();
   return { skin: hex(l.skin, d.skin), hair: GL.HAIRS.some((h) => h[0] === l.hair) ? l.hair : d.hair, hc: hex(l.hc, d.hc), top: typeof l.top === 'string' ? l.top.slice(0, 10) : 'tee', tc: hex(l.tc, d.tc), bc: hex(l.bc, d.bc), sc: hex(l.sc, d.sc),
-    hat: typeof l.hat === 'string' ? l.hat.slice(0, 12) : 'none', hatc: l.hatc ? hex(l.hatc, undefined) : undefined, gl: typeof l.gl === 'string' ? l.gl.slice(0, 10) : 'none', apron: l.apron ? hex(l.apron, undefined) : undefined };
+    hat: typeof l.hat === 'string' ? l.hat.slice(0, 12) : 'none', hatc: l.hatc ? hex(l.hatc, undefined) : undefined, gl: typeof l.gl === 'string' ? l.gl.slice(0, 10) : 'none', apron: l.apron ? hex(l.apron, undefined) : undefined, hb: l.hb ? 1 : undefined, bub: l.bub ? 1 : undefined };
 }
 function cleanHome(h) {
   if (!h || !GL.HOUSES[h.type]) return { type: 'apt', layout: [], wall: 0, floor: 'wood' };

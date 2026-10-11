@@ -31,10 +31,10 @@ function placePrev() {
   void A;
 }
 function rebuildPrev() { const r = CR.prev.g.rotation.y; W.scene.remove(CR.prev.g); CR.prev = MD.avatar(CR.look); CR.prev.g.position.set(CR.px, 0.05, CR.pz); CR.prev.g.rotation.y = r; W.scene.add(CR.prev.g); }
-function owned(kind, id) { const s = sv(); if (kind === 'top') return !GL.TOPS[id].price || s.clothes[id]; if (kind === 'hat') return !GL.HATS[id].price || s.clothes['hat_' + id]; return !GL.GLASSES[id].price || s.clothes['gl_' + id]; }
+function owned(kind, id) { const s = sv(); const tbl = kind === 'top' ? GL.TOPS : kind === 'hat' ? GL.HATS : GL.GLASSES; if (tbl[id] && tbl[id].dlc) return !!(GL.GLP && GL.GLP.owned()); if (kind === 'top') return !GL.TOPS[id].price || s.clothes[id]; if (kind === 'hat') return !GL.HATS[id].price || s.clothes['hat_' + id]; return !GL.GLASSES[id].price || s.clothes['gl_' + id]; }
 function cost() { let c = 0; const L = CR.look; if (!owned('top', L.top)) c += GL.TOPS[L.top].price; if (!owned('hat', L.hat)) c += GL.HATS[L.hat].price; if (!owned('gl', L.gl)) c += GL.GLASSES[L.gl].price; return c; }
 function sw(field, cols) { return '<div class="swrow">' + cols.map((c) => '<button class="swc' + (CR.look[field] === c ? ' on' : '') + '" style="background:' + c + '" data-a="crSet" data-v="' + field + '|' + c + '"></button>').join('') + '</div>'; }
-function chips(field, list, kind) { return '<div class="chiprow">' + list.map((q) => { const id = q[0], o = kind ? !owned(kind, id) : false, pr = kind ? (kind === 'top' ? GL.TOPS : kind === 'hat' ? GL.HATS : GL.GLASSES)[id].price : 0; return '<button class="chip' + (CR.look[field] === id ? ' on' : '') + '" data-a="crSet" data-v="' + field + '|' + id + '">' + esc(q[1]) + (o ? ' <small>' + money(pr) + '</small>' : '') + '</button>'; }).join('') + '</div>'; }
+function chips(field, list, kind) { return '<div class="chiprow">' + list.map((q) => { const id = q[0], o = kind ? !owned(kind, id) : false, pr = kind ? (kind === 'top' ? GL.TOPS : kind === 'hat' ? GL.HATS : GL.GLASSES)[id].price : 0; const tb = field === 'top' ? GL.TOPS : field === 'hat' ? GL.HATS : field === 'gl' ? GL.GLASSES : null, dl = tb && tb[id] && tb[id].dlc, dlOwn = dl && GL.GLP && GL.GLP.owned(); return '<button class="chip' + (CR.look[field] === id ? ' on' : '') + (dl ? ' dlc' : '') + '" data-a="crSet" data-v="' + field + '|' + id + '">' + (dl ? (dlOwn ? '\uD83D\uDC00 ' : '\uD83D\uDD12 ') : '') + esc(q[1]) + (dl ? '' : o ? ' <small>' + money(pr) + '</small>' : '') + '</button>'; }).join('') + '</div>'; }
 function drawCreator() {
   const L = CR.look, t = CR.tab, mode = CR.mode, s = sv();
   let h = '<div class="crTop"><b>' + (mode === 'new' ? 'CREATE YOUR CHARACTER' : mode === 'boutique' ? '\uD83D\uDC57 COCO\u2019S BOUTIQUE' : '\uD83D\uDC5A WARDROBE') + '</b><button class="rb" data-a="crSpin">\u21BB</button></div>';
@@ -55,6 +55,7 @@ H.crTab = (v) => { CR.tab = v; drawCreator(); };
 H.crSpin = () => { CR.prev.g.rotation.y += Math.PI / 2; };
 H.crSet = (v) => {
   const [f, val] = v.split('|');
+  { const tb = f === 'top' ? GL.TOPS : f === 'hat' ? GL.HATS : f === 'gl' ? GL.GLASSES : null; if (tb && tb[val] && tb[val].dlc && !(GL.GLP && GL.GLP.owned())) { G.toast('\uD83D\uDD12 That\u2019s from the Good Life Pack! Unlock it in the Grok Arcade DLC Shop.', true); return; } }
   if (CR.mode === 'new' && ((f === 'top' && GL.TOPS[val].price) || (f === 'hat' && GL.HATS[val].price) || (f === 'gl' && GL.GLASSES[val].price))) { G.toast('That\u2019s sold at the boutique \u2014 come shopping later!'); return; }
   CR.look[f] = val; rebuildPrev(); drawCreator();
 };
@@ -74,9 +75,10 @@ UI.boutique = () => UI.creator('boutique');
 
 /* ---------------- phone ---------------- */
 const APPS = [['map', '\uD83D\uDDFA\uFE0F', 'Map'], ['career', '\uD83D\uDCBC', 'Career'], ['house', '\uD83C\uDFE0', 'House'], ['cars', '\uD83D\uDE97', 'Cars'], ['pets', '\uD83D\uDC3E', 'Pets'], ['friends', '\uD83D\uDC9E', 'Friends'], ['goals', '\uD83C\uDFC6', 'Goals'], ['bag', '\uD83C\uDF92', 'Bag'], ['bank', '\uD83C\uDFE6', 'Bank'], ['health', '\uD83E\uDE7A', 'Health'], ['911', '\uD83D\uDCDE', '911'], ['scen', '\uD83C\uDFAC', 'Scenarios'], ['animal', '\uD83D\uDC3E', 'Animal Ctrl'], ['tow', '\uD83D\uDEFB', 'Tow'], ['weather', '\uD83C\uDF26\uFE0F', 'Weather'], ['settings', '\u2699\uFE0F', 'Settings']];
+UI.APPS = APPS;
 UI.phone = function () {
   const s = sv(); const p = $('phone');
-  p.innerHTML = '<div class="phBox"><div class="phTop"><span>' + G.timeStr() + '</span><b>' + money(s.money) + '</b><button class="xbtn" data-a="phClose">\u2715</button></div><div class="apps">' + APPS.map((a) => '<button class="app' + (G.badges && G.badges[a[0]] ? ' dot' : '') + '" data-a="app" data-v="' + a[0] + '"><i>' + a[1] + '</i><span>' + a[2] + '</span></button>').join('') + '</div><p class="sub small">' + (G.online() && GS.room ? 'Room ' + GS.room.code + ' \u00b7 ' + GS.S.players.length + '/3' : 'Playing solo') + '</p></div>';
+  p.innerHTML = '<div class="phBox"><div class="phTop"><span>' + G.timeStr() + '</span><b>' + money(s.money) + '</b><button class="xbtn" data-a="phClose">\u2715</button></div><div class="apps">' + APPS.filter((a) => !a[3] || a[3]()).map((a) => '<button class="app' + (G.badges && G.badges[a[0]] ? ' dot' : '') + '" data-a="app" data-v="' + a[0] + '"><i>' + a[1] + '</i><span>' + a[2] + '</span></button>').join('') + '</div><p class="sub small">' + (G.online() && GS.room ? 'Room ' + GS.room.code + ' \u00b7 ' + GS.S.players.length + '/3' : 'Playing solo') + '</p></div>';
   p.classList.remove('hidden'); GS.joyReset && GS.joyReset();
 };
 H.phClose = () => $('phone').classList.add('hidden');
@@ -150,7 +152,7 @@ UI.needs = function () { const s = sv(); open('needs', head(G.moodFace() + ' How
 UI.bag = function (mode) {
   const s = sv(); let h = head('\uD83C\uDF92 Bag') + '<div class="list">'; const ks = Object.keys(s.bag).filter((k) => s.bag[k] > 0);
   if (!ks.length) h += '<p class="sub">Your bag is empty. Buy food at Fresh Mart or the caf\u00e9!</p>';
-  ks.forEach((k) => { const it = GL.ITEMS[k]; h += '<div class="lrow"><b>' + it.icon + ' ' + esc(it.name) + ' \u00d7' + s.bag[k] + '</b><span>' + (it.cat === 'food' ? btn('eat', k, 'EAT', 'small green') : it.cat === 'med' ? btn('useMed', k, 'USE', 'small green') : it.cat === 'tech' ? btn('useTech', k, 'PLAY', 'small green') : it.cat === 'gear' ? '<small>carried \u2714</small>' : it.cat === 'cook' ? '<small>use at a stove</small>' : it.cat === 'pet' || it.cat === 'toy' ? '<small>for pets</small>' : '<small>gift</small>') + '</span></div>'; });
+  ks.forEach((k) => { const it = GL.ITEMS[k]; h += '<div class="lrow"><b>' + it.icon + ' ' + esc(it.name) + ' \u00d7' + s.bag[k] + '</b><span>' + (it.cat === 'food' ? btn('eat', k, 'EAT', 'small green') : it.cat === 'med' ? btn('useMed', k, 'USE', 'small green') : it.cat === 'tech' ? btn('useTech', k, 'PLAY', 'small green') : it.cat === 'ratita' && GL.GLP ? GL.GLP.bagBtn(k) : it.cat === 'gear' ? '<small>carried \u2714</small>' : it.cat === 'cook' ? '<small>use at a stove</small>' : it.cat === 'pet' || it.cat === 'toy' ? '<small>for pets</small>' : '<small>gift</small>') + '</span></div>'; });
   open('bag', h + '</div>'); void mode;
 };
 H.eat = (k) => { const s = sv(), it = GL.ITEMS[k]; if (!s.bag[k]) return; s.bag[k]--; if (it.h) G.need('h', it.h); if (it.e) G.need('e', it.e); if (it.f) G.need('f', it.f); Snd.fx('eat'); W.fx('heart', GS.me.x, 2, GS.me.z, 3, 0.4); G.toast('\uD83D\uDE0B Yum! ' + it.name); G.persist(); UI.bag(); };
