@@ -190,7 +190,7 @@ GL.FAMILY = [
   { id: 'candy', sp: 'schnauzer', name: 'Candy', col: ['#8e939c', '#eceef1'], acc: { neck: 'pinkcollar' }, blurb: 'A sweet, bouncy miniature schnauzer with a fluffy beard.' },
   { id: 'martina', sp: 'tortoise', name: 'Martina', col: ['#8d6b3c', '#b59a68'], acc: { head: 'flower' }, blurb: 'A calm desert tortoise who loves veggies and sunny naps.' },
   { id: 'luna', sp: 'rat', name: 'Luna', col: ['#8f93a3', '#f4f2f7'], acc: { head: 'bow' }, blurb: 'A curious fancy rat with soft moon-grey fur.' },
-  { id: 'pirat', sp: 'rat', name: 'Pi-rat', col: ['#b98b62', '#f6eadb'], oneEye: 1, acc: { neck: 'bandana' }, blurb: 'A brave little fancy rat with one eye and a big heart. Arr!' },
+  { id: 'pirat', sp: 'rat', name: 'Pi-rat', col: ['#f8f6f2', '#ffffff'], oneEye: 1, acc: { neck: 'bandana' }, blurb: 'A brave little fancy rat with one eye and a big heart. Arr!' },
   { id: 'snowie', sp: 'rat', name: 'Snowie', col: ['#fbfbfb', '#ffe4ec'], eye: '#d9466f', acc: {}, blurb: 'A snow-white fancy rat with rosy eyes.' }
 ];
 GL.familyById = (id) => GL.FAMILY.find((f) => f.id === id);

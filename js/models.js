@@ -70,7 +70,7 @@ function quad(P, o) {
   const head = P.head = grp(body, 0, hy, hz); P.headR = hr;
   if (o.neckUp) { const nk = cyl(hr * 0.55, hr * 2.4, c1, body, 0, (cy + hy) / 2, L * 0.4 + hr * 0.2); nk.rotation.x = 0.5; }
   if (o.robot) { box(hr * 1.9, hr * 1.6, hr * 1.7, c1, head, 0, 0, 0); box(hr * 1.6, hr * 0.5, 0.05, '#0f172a', head, 0, hr * 0.12, hr * 0.86); }
-  else ell(hr, hr * (o.headSy || 0.92), hr * (o.headSz || 0.95), o.points ? c1 : c1, head, 0, 0, 0);
+  else { ell(hr, hr * (o.headSy || 0.92), hr * (o.headSz || 0.95), o.hood || c1, head, 0, 0, 0); if (o.hood) ell(hr * 0.16, hr * 0.5, hr * 0.2, '#ffffff', head, 0, hr * 0.35, hr * 0.78); }
   const sn = o.snout == null ? 0.15 : o.snout;
   if (sn > 0.02) {
     const sl = o.pointy ? sn * 1.3 : sn;
@@ -198,7 +198,7 @@ MD.pet = function (look) {
   const spc = GL.SPECIES[look.sp] || GL.SPECIES.schnauzer, kind = spc.kind;
   const g = new T.Group(), inner = grp(g), rig = grp(inner);
   const P = { g, inner, rig, att: { head: new T.Group(), neck: new T.Group(), face: new T.Group() }, act: null, actT: 0, actD: 1, ph: Math.random() * 6, blink: 2 + Math.random() * 3, mood: 1, look, kind };
-  const o = Object.assign({}, spc.opt || {}, { c1: look.col[0], c2: look.col[1], eye: look.eye || (spc.opt && spc.opt.eye), oneEye: look.oneEye });
+  const o = Object.assign({}, spc.opt || {}, { c1: look.col[0], c2: look.col[1], eye: look.eye || (spc.opt && spc.opt.eye), oneEye: look.oneEye, hood: (look.oneEye && look.sp === 'rat') ? '#6b5e52' : null });
   if (o.stripes) o.stripeCol = shade(look.col[0], -0.35);
   if (kind === 'bird') bird(P, o);
   else if (kind === 'fish') fish(P, o);
